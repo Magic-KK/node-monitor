@@ -2,7 +2,7 @@
 
 > 实时监控团队节点状态，可视化展示运行情况
 
-![Version](https://img.shields.io/badge/version-v1.8.0-6C63FF.svg?style=flat-square)
+![Version](https://img.shields.io/badge/version-v1.25.0-6C63FF.svg?style=flat-square)
 [![GitHub stars](https://img.shields.io/github/stars/Magic-KK/node-monitor?style=flat-square)](https://github.com/Magic-KK/node-monitor/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/Magic-KK/node-monitor?style=flat-square)](https://github.com/Magic-KK/node-monitor/network)
 [![GitHub issues](https://img.shields.io/github/issues/Magic-KK/node-monitor?style=flat-square)](https://github.com/Magic-KK/node-monitor/issues)
@@ -63,6 +63,80 @@ npm run dev
 - **主界面**: http://localhost:3000
 - **API**: http://localhost:3000/api/status
 - **配置**: http://localhost:3000/api/config
+
+---
+
+## 🐳 Docker 部署
+
+### 方式一：使用 Docker Compose（推荐）
+
+```bash
+# 启动服务
+docker-compose up -d
+
+# 查看日志
+docker-compose logs -f
+
+# 停止服务
+docker-compose down
+```
+
+### 方式二：手动构建和运行
+
+```bash
+# 构建镜像
+docker build -t node-monitor:latest .
+
+# 运行容器
+docker run -d \
+  -p 3000:3000 \
+  --name node-monitor \
+  -v $(pwd)/config:/app/config \
+  -v $(pwd)/data:/app/data \
+  node-monitor:latest
+
+# 查看日志
+docker logs -f node-monitor
+
+# 停止并删除容器
+docker stop node-monitor && docker rm node-monitor
+```
+
+### 方式三：使用 npm 脚本
+
+```bash
+# 构建镜像
+npm run docker:build
+
+# 运行容器
+npm run docker:run
+
+# 查看日志
+npm run docker:logs
+
+# 停止容器
+npm run docker:stop
+```
+
+### 数据持久化
+
+Docker 部署会自动挂载以下目录，确保数据持久化：
+
+- `./config` - 配置文件
+- `./data/history` - 历史状态记录
+- `./data/logs` - 日志数据
+- `./data/reports` - 报告数据
+- `./data/alerts` - 告警数据
+
+### 环境变量
+
+可以通过环境变量配置服务：
+
+| 变量名 | 说明 | 默认值 |
+|--------|------|--------|
+| `NODE_ENV` | 运行环境 | `production` |
+| `PORT` | 服务端口 | `3000` |
+| `FEISHU_WEBHOOK` | 飞书 webhook 地址 | 无 |
 
 ---
 

@@ -1,0 +1,53 @@
+# Git
+.git
+.gitignore
+
+# Node modules (will be installed in container)
+node_modules
+npm-debug.log
+
+# Development files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+logs
+*.log
+
+# Test files
+test
+tests
+*.test.js
+*.spec.js
+__tests__
+coverage
+
+# Documentation
+README*.md
+CONTRIBUTING.md
+docs
+
+# Docker files (not needed in image)
+docker-compose*.yml
+Dockerfile*
+.dockerignore
+
+# Data (will be mounted as volumes)
+data/history/*
+data/logs/*
+data/reports/*
+data/alerts/*
+
+# Keep these files in the image (they contain defaults)
+!data/.gitkeep

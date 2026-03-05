@@ -18,6 +18,9 @@ const http = require('http');
 const os = require('os');
 const WebSocket = require('ws');
 
+// 加载 package.json 获取版本信息
+const packageJson = require('./package.json');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -1530,6 +1533,20 @@ app.use(express.json());
 
 // 静态文件服务
 app.use(express.static(path.join(__dirname, 'public')));
+
+/**
+ * API: 健康检查端点（用于 Docker 健康检查）
+ * GET /api/health
+ */
+app.get('/api/health', (req, res) => {
+  res.json({
+    success: true,
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    version: packageJson.version || '1.25.0'
+  });
+});
 
 /**
  * API: 获取团队配置（从 OpenClaw 读取）

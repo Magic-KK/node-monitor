@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  node-monitor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: node-monitor
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      # 持久化配置数据
+      - ./config:/app/config
+      # 持久化历史数据
+      - ./data/history:/app/data/history
+      # 持久化日志数据
+      - ./data/logs:/app/data/logs
+      # 持久化报告数据
+      - ./data/reports:/app/data/reports
+      # 持久化告警数据
+      - ./data/alerts:/app/data/alerts
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      # 可选：配置飞书 webhook
+      # - FEISHU_WEBHOOK=https://open.feishu.cn/open-apis/bot/v2/hook/xxx
+    networks:
+      - node-monitor-network
+
+networks:
+  node-monitor-network:
+    driver: bridge
