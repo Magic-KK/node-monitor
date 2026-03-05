@@ -116,6 +116,10 @@
         <span class="btn-icon">📈</span>
         历史趋势
       </button>
+      <button id="alertsBtn" class="btn btn-danger">
+        <span class="btn-icon">🚨</span>
+        告警管理
+      </button>
       <button id="settingsBtn" class="btn btn-info">
         <span class="btn-icon">⚙️</span>
         配置管理
@@ -180,7 +184,7 @@
         <a href="https://github.com/Magic-KK/node-monitor" target="_blank">GITHUB</a>
       </p>
       <p style="margin-top: 10px; font-size: 0.75rem; color: var(--text-muted);">
-        SYSTEM VERSION 1.9.0 // HISTORY TRACKING & ANALYTICS
+        SYSTEM VERSION 1.10.0 // ALERT NOTIFICATIONS
       </p>
     </footer>
   </div>
@@ -260,6 +264,108 @@
             </tbody>
           </table>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 告警管理弹窗 -->
+  <div id="alertsModal" class="modal">
+    <div class="modal-content modal-content-large">
+      <div class="modal-header">
+        <h2>🚨 告警通知管理</h2>
+        <button id="closeAlertsModal" class="modal-close" title="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <!-- 标签页导航 -->
+        <div class="settings-tabs">
+          <button class="tab-btn active" data-tab="alerts-config">⚙️ 告警配置</button>
+          <button class="tab-btn" data-tab="alerts-history">📋 告警历史</button>
+        </div>
+
+        <!-- 告警配置标签页 -->
+        <div class="tab-content active" id="tab-alerts-config">
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="alertsEnabled">
+              <span>启用告警系统</span>
+            </label>
+            <small class="form-hint">开启后节点状态变化时将发送通知</small>
+          </div>
+
+          <div class="form-group">
+            <label for="feishuWebhookInput">飞书 Webhook URL</label>
+            <input type="text" id="feishuWebhookInput" class="form-input" placeholder="https://open.feishu.cn/open-apis/bot/v2/hook/...">
+            <small class="form-hint">在飞书群聊中添加自定义机器人获取 Webhook 地址</small>
+          </div>
+
+          <div class="form-group">
+            <label>通知触发条件</label>
+            <div class="checkbox-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="notifyOnOffline" checked>
+                <span>节点离线时通知</span>
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" id="notifyOnOnline">
+                <span>节点上线时通知</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="cooldownMinutesInput">告警冷却时间（分钟）</label>
+            <input type="number" id="cooldownMinutesInput" class="form-input" min="1" max="60" value="5">
+            <small class="form-hint">同一节点在冷却时间内不会重复发送告警</small>
+          </div>
+
+          <div class="form-actions">
+            <button id="testAlertBtn" class="btn btn-warning">
+              <span class="btn-icon">🧪</span>
+              测试告警
+            </button>
+            <button id="saveAlertsConfigBtn" class="btn btn-success">
+              <span class="btn-icon">💾</span>
+              保存配置
+            </button>
+          </div>
+
+          <div id="alertsConfigMessage" class="message-box" style="display: none;"></div>
+        </div>
+
+        <!-- 告警历史标签页 -->
+        <div class="tab-content" id="tab-alerts-history">
+          <div class="history-filters">
+            <select id="alertHistoryFilter" class="form-select">
+              <option value="all">全部类型</option>
+              <option value="offline">离线告警</option>
+              <option value="online">上线告警</option>
+              <option value="test">测试告警</option>
+            </select>
+            <button id="clearAlertsHistoryBtn" class="btn btn-danger">
+              <span class="btn-icon">🗑️</span>
+              清除历史
+            </button>
+          </div>
+
+          <div class="alerts-table-container">
+            <table class="alerts-table">
+              <thead>
+                <tr>
+                  <th>时间</th>
+                  <th>节点</th>
+                  <th>类型</th>
+                  <th>严重程度</th>
+                  <th>消息</th>
+                </tr>
+              </thead>
+              <tbody id="alertsTableBody">
+                <!-- 告警历史动态生成 -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="alertsHistoryMessage" class="message-box" style="display: none;"></div>
       </div>
     </div>
   </div>

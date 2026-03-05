@@ -829,6 +829,14 @@ function bindEvents() {
     }, 100);
   });
   
+  // ===== 告警管理相关事件 =====
+  
+  // 告警管理按钮
+  const alertsBtn = document.getElementById('alertsBtn');
+  if (alertsBtn) {
+    alertsBtn.addEventListener('click', openAlertsModal);
+  }
+  
   // ===== 配置管理相关事件 =====
   
   // 配置管理按钮
@@ -838,6 +846,46 @@ function bindEvents() {
   }
   
   // ===== 历史趋势相关事件 =====
+  
+  // 关闭告警弹窗按钮
+  const closeAlertsModal = document.getElementById('closeAlertsModal');
+  if (closeAlertsModal) {
+    closeAlertsModal.addEventListener('click', closeAlertsModalFunc);
+  }
+  
+  // 告警配置标签页切换
+  document.querySelectorAll('[data-tab="alerts-config"]').forEach(btn => {
+    btn.addEventListener('click', () => switchAlertsTab('config'));
+  });
+  
+  // 告警历史标签页切换
+  document.querySelectorAll('[data-tab="alerts-history"]').forEach(btn => {
+    btn.addEventListener('click', () => switchAlertsTab('history'));
+  });
+  
+  // 保存告警配置按钮
+  const saveAlertsConfigBtn = document.getElementById('saveAlertsConfigBtn');
+  if (saveAlertsConfigBtn) {
+    saveAlertsConfigBtn.addEventListener('click', saveAlertsConfig);
+  }
+  
+  // 测试告警按钮
+  const testAlertBtn = document.getElementById('testAlertBtn');
+  if (testAlertBtn) {
+    testAlertBtn.addEventListener('click', testAlert);
+  }
+  
+  // 清除告警历史按钮
+  const clearAlertsHistoryBtn = document.getElementById('clearAlertsHistoryBtn');
+  if (clearAlertsHistoryBtn) {
+    clearAlertsHistoryBtn.addEventListener('click', clearAlertsHistory);
+  }
+  
+  // 告警历史筛选器
+  const alertHistoryFilter = document.getElementById('alertHistoryFilter');
+  if (alertHistoryFilter) {
+    alertHistoryFilter.addEventListener('change', () => loadAlertsHistory());
+  }
   
   // 关闭历史弹窗按钮
   const closeHistoryModal = document.getElementById('closeHistoryModal');
@@ -2467,6 +2515,258 @@ async function loadHistoryRecords() {
     console.error('❌ 加载历史记录失败:', err);
     tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #ff4757;">加载失败</td></tr>';
   }
+}
+
+// ===== 告警管理功能 =====
+
+/**
+ * 打开告警管理弹窗
+ */
+async function openAlertsModal() {
+  const modal = document.getElementById('alertsModal');
+  if (!modal) return;
+  
+  modal.style.display = 'flex';
+  
+  // 加载告警配置
+  await loadAlertsConfig();
+  
+  // 加载告警历史
+  await loadAlertsHistory();
+}
+
+/**
+ * 关闭告警管理弹窗
+ */
+function closeAlertsModalFunc() {
+  const modal = document.getElementById('alertsModal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
+/**
+ * 切换告警标签页
+ */
+function switchAlertsTab(tab) {
+  // 移除所有标签页的 active 类
+  document.querySelectorAll('#alertsModal .tab-btn').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  document.querySelectorAll('#alertsModal .tab-content').forEach(content => {
+    content.classList.remove('active');
+  });
+  
+  // 添加当前标签页的 active 类
+  document.querySelector(`#alertsModal [data-tab="alerts-${tab}"]`)?.classList.add('active');
+  document.querySelector(`#alertsModal #tab-alerts-${tab}`)?.classList.add('active');
+  
+  // 如果切换到历史标签页，重新加载历史
+  if (tab === 'history') {
+    loadAlertsHistory();
+  }
+}
+
+/**
+ * 加载告警配置
+ */
+async function loadAlertsConfig() {
+  try {
+    const response = await fetch('/api/alerts/config');
+    const result = await response.json();
+    
+    if (result.success) {
+      const config = result.data;
+      
+      // 填充表单
+      document.getElementById('alertsEnabled').checked = config.enabled || false;
+      document.getElementById('feishuWebhookInput').value = config.feishuWebhook || '';
+      document.getElementById('notifyOnOffline').checked = config.notifyOnOffline !== false;
+      document.getElementById('notifyOnOnline').checked = config.notifyOnOnline || false;
+      document.getElementById('cooldownMinutesInput').value = config.cooldownMinutes || 5;
+    }
+  } catch (err) {
+    console.error('❌ 加载告警配置失败:', err);
+    showAlertsMessage('加载配置失败', 'error');
+  }
+}
+
+/**
+ * 保存告警配置
+ */
+async function saveAlertsConfig() {
+  const config = {
+    enabled: document.getElementById('alertsEnabled').checked,
+    feishuWebhook: document.getElementById('feishuWebhookInput').value.trim(),
+    notifyOnOffline: document.getElementById('notifyOnOffline').checked,
+    notifyOnOnline: document.getElementById('notifyOnOnline').checked,
+    cooldownMinutes: parseInt(document.getElementById('cooldownMinutesInput').value) || 5
+  };
+  
+  // 验证
+  if (config.enabled && !config.feishuWebhook) {
+    showAlertsMessage('启用告警需要配置飞书 Webhook', 'error');
+    return;
+  }
+  
+  try {
+    const response = await fetch('/api/alerts/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(config)
+    });
+    const result = await response.json();
+    
+    if (result.success) {
+      showAlertsMessage('告警配置已保存', 'success');
+      // 3 秒后自动关闭弹窗
+      setTimeout(() => closeAlertsModalFunc(), 2000);
+    } else {
+      showAlertsMessage(result.error || '保存失败', 'error');
+    }
+  } catch (err) {
+    console.error('❌ 保存告警配置失败:', err);
+    showAlertsMessage('保存失败：' + err.message, 'error');
+  }
+}
+
+/**
+ * 测试告警
+ */
+async function testAlert() {
+  const configEnabled = document.getElementById('alertsEnabled').checked;
+  
+  if (!configEnabled) {
+    showAlertsMessage('请先启用告警系统', 'warning');
+    return;
+  }
+  
+  const btn = document.getElementById('testAlertBtn');
+  const originalText = btn.innerHTML;
+  btn.innerHTML = '<span class="btn-icon">⏳</span> 发送中...';
+  btn.disabled = true;
+  
+  try {
+    const response = await fetch('/api/alerts/test', { method: 'POST' });
+    const result = await response.json();
+    
+    if (result.success) {
+      showAlertsMessage('测试告警已发送，请检查飞书', 'success');
+    } else {
+      showAlertsMessage(result.error || '发送失败', 'error');
+    }
+  } catch (err) {
+    console.error('❌ 测试告警失败:', err);
+    showAlertsMessage('发送失败：' + err.message, 'error');
+  } finally {
+    btn.innerHTML = originalText;
+    btn.disabled = false;
+  }
+}
+
+/**
+ * 加载告警历史
+ */
+async function loadAlertsHistory() {
+  const tbody = document.getElementById('alertsTableBody');
+  if (!tbody) return;
+  
+  const filter = document.getElementById('alertHistoryFilter')?.value || 'all';
+  
+  try {
+    let url = '/api/alerts/history?limit=50';
+    if (filter !== 'all') {
+      url += `&type=${filter}`;
+    }
+    
+    const response = await fetch(url);
+    const result = await response.json();
+    
+    if (!result.success || !result.data.alerts || result.data.alerts.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-secondary);">暂无告警记录</td></tr>';
+      return;
+    }
+    
+    const alerts = result.data.alerts;
+    
+    tbody.innerHTML = alerts.map(alert => {
+      const time = new Date(alert.timestamp).toLocaleString('zh-CN');
+      const typeClass = `alert-type-${alert.type}`;
+      const typeText = alert.alertType || alert.type;
+      const severityClass = `alert-severity-${alert.severity}`;
+      const severityText = alert.severity === 'high' ? '高' : '低';
+      
+      return `
+        <tr>
+          <td>${time}</td>
+          <td>${alert.nodeName || alert.nodeId}</td>
+          <td><span class="alert-type-badge ${typeClass}">${typeText}</span></td>
+          <td><span class="alert-severity-badge ${severityClass}">${severityText}</span></td>
+          <td class="alert-message" title="${alert.message}">${alert.message}</td>
+        </tr>
+      `;
+    }).join('');
+    
+  } catch (err) {
+    console.error('❌ 加载告警历史失败:', err);
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #ff4757;">加载失败</td></tr>';
+  }
+}
+
+/**
+ * 清除告警历史
+ */
+async function clearAlertsHistory() {
+  if (!confirm('确定要清除所有告警历史记录吗？此操作不可恢复。')) {
+    return;
+  }
+  
+  try {
+    const response = await fetch('/api/alerts/history/clear', { method: 'POST' });
+    const result = await response.json();
+    
+    if (result.success) {
+      showAlertsHistoryMessage('告警历史已清除', 'success');
+      loadAlertsHistory();
+    } else {
+      showAlertsHistoryMessage(result.error || '清除失败', 'error');
+    }
+  } catch (err) {
+    console.error('❌ 清除告警历史失败:', err);
+    showAlertsHistoryMessage('清除失败：' + err.message, 'error');
+  }
+}
+
+/**
+ * 显示告警配置消息
+ */
+function showAlertsMessage(message, type = 'info') {
+  const messageBox = document.getElementById('alertsConfigMessage');
+  if (!messageBox) return;
+  
+  messageBox.textContent = message;
+  messageBox.className = `message-box message-${type}`;
+  messageBox.style.display = 'block';
+  
+  setTimeout(() => {
+    messageBox.style.display = 'none';
+  }, 3000);
+}
+
+/**
+ * 显示告警历史消息
+ */
+function showAlertsHistoryMessage(message, type = 'info') {
+  const messageBox = document.getElementById('alertsHistoryMessage');
+  if (!messageBox) return;
+  
+  messageBox.textContent = message;
+  messageBox.className = `message-box message-${type}`;
+  messageBox.style.display = 'block';
+  
+  setTimeout(() => {
+    messageBox.style.display = 'none';
+  }, 3000);
 }
 
 // 页面加载完成后初始化

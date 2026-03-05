@@ -159,6 +159,33 @@ const nodeStatusCache = new Map();
 const historyDir = path.join(__dirname, 'data', 'history');
 const historyFilePath = path.join(historyDir, 'node-history.json');
 
+// 告警配置和数据路径
+const alertsDir = path.join(__dirname, 'data', 'alerts');
+const alertsConfigPath = path.join(alertsDir, 'alerts-config.json');
+const alertsHistoryPath = path.join(alertsDir, 'alerts-history.json');
+
+// 告警配置缓存
+let alertsConfig = {
+  enabled: false,
+  feishuWebhook: '',
+  emailEnabled: false,
+  emailConfig: {
+    smtpHost: '',
+    smtpPort: 587,
+    username: '',
+    password: '',
+    from: '',
+    to: []
+  },
+  notifyOnOffline: true,    // 节点离线时通知
+  notifyOnOnline: false,    // 节点上线时通知（可选，避免骚扰）
+  notifyOnConfigChange: false, // 配置变化时通知
+  cooldownMinutes: 5        // 同一节点告警冷却时间（分钟）
+};
+
+// 告警发送历史（用于冷却）
+const alertsHistory = [];
+
 // 初始化历史数据存储
 function initHistoryStorage() {
   try {
@@ -182,6 +209,287 @@ function initHistoryStorage() {
     console.log('✅ 历史数据存储初始化完成');
   } catch (err) {
     console.warn('⚠️ 历史数据存储初始化失败:', err.message);
+  }
+}
+
+// 初始化告警系统
+function initAlertsSystem() {
+  try {
+    // 创建告警目录
+    if (!fs.existsSync(alertsDir)) {
+      fs.mkdirSync(alertsDir, { recursive: true });
+      console.log('📁 创建告警数据目录:', alertsDir);
+    }
+    
+    // 加载告警配置
+    if (fs.existsSync(alertsConfigPath)) {
+      alertsConfig = JSON.parse(fs.readFileSync(alertsConfigPath, 'utf8'));
+      console.log('✅ 告警配置加载成功');
+    } else {
+      // 保存默认配置
+      fs.writeFileSync(alertsConfigPath, JSON.stringify(alertsConfig, null, 2));
+      console.log('📄 初始化告警配置文件');
+    }
+    
+    // 初始化告警历史
+    if (!fs.existsSync(alertsHistoryPath)) {
+      const initialData = {
+        version: '1.0',
+        createdAt: new Date().toISOString(),
+        alerts: []
+      };
+      fs.writeFileSync(alertsHistoryPath, JSON.stringify(initialData, null, 2));
+      console.log('📄 初始化告警历史文件');
+    }
+    
+    // 清理旧的告警历史（保留最近 7 天）
+    cleanupOldAlerts();
+    
+    console.log('✅ 告警系统初始化完成');
+  } catch (err) {
+    console.warn('⚠️ 告警系统初始化失败:', err.message);
+  }
+}
+
+// 清理 7 天前的告警记录
+function cleanupOldAlerts() {
+  try {
+    if (!fs.existsSync(alertsHistoryPath)) return;
+    
+    const historyData = JSON.parse(fs.readFileSync(alertsHistoryPath, 'utf8'));
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    
+    historyData.alerts = historyData.alerts.filter(alert => 
+      new Date(alert.timestamp) > sevenDaysAgo
+    );
+    
+    fs.writeFileSync(alertsHistoryPath, JSON.stringify(historyData, null, 2));
+    console.log('🧹 清理旧告警记录完成');
+  } catch (err) {
+    console.warn('⚠️ 清理告警记录失败:', err.message);
+  }
+}
+
+// 保存告警配置
+function saveAlertsConfig() {
+  try {
+    fs.writeFileSync(alertsConfigPath, JSON.stringify(alertsConfig, null, 2));
+    console.log('💾 告警配置已保存');
+  } catch (err) {
+    console.warn('⚠️ 保存告警配置失败:', err.message);
+  }
+}
+
+// 记录告警历史
+function recordAlert(alert) {
+  try {
+    let historyData;
+    if (fs.existsSync(alertsHistoryPath)) {
+      historyData = JSON.parse(fs.readFileSync(alertsHistoryPath, 'utf8'));
+    } else {
+      historyData = { version: '1.0', createdAt: new Date().toISOString(), alerts: [] };
+    }
+    
+    historyData.alerts.unshift({
+      ...alert,
+      timestamp: new Date().toISOString()
+    });
+    
+    // 限制记录数量（保留最近 500 条）
+    if (historyData.alerts.length > 500) {
+      historyData.alerts = historyData.alerts.slice(0, 500);
+    }
+    
+    fs.writeFileSync(alertsHistoryPath, JSON.stringify(historyData, null, 2));
+  } catch (err) {
+    console.warn('⚠️ 记录告警历史失败:', err.message);
+  }
+}
+
+// 检查是否在冷却期内
+function isInCooldown(nodeId, alertType) {
+  const cooldownMs = alertsConfig.cooldownMinutes * 60 * 1000;
+  const now = Date.now();
+  
+  return alertsHistory.some(alert => 
+    alert.nodeId === nodeId && 
+    alert.type === alertType && 
+    (now - new Date(alert.timestamp).getTime()) < cooldownMs
+  );
+}
+
+// 发送飞书 webhook 通知
+async function sendFeishuAlert(alert) {
+  if (!alertsConfig.feishuWebhook) {
+    console.warn('⚠️ 飞书 webhook 未配置，跳过发送');
+    return false;
+  }
+  
+  try {
+    const https = require('https');
+    
+    // 根据告警类型设置颜色和表情
+    let color = '#246eff';
+    let emoji = '🔔';
+    if (alert.type === 'offline') {
+      color = '#f53f3f';
+      emoji = '🚨';
+    } else if (alert.type === 'online') {
+      color = '#00b42a';
+      emoji = '✅';
+    } else if (alert.type === 'config_change') {
+      color = '#ff7d00';
+      emoji = '⚙️';
+    }
+    
+    // 构建飞书消息卡片
+    const message = {
+      msg_type: 'interactive',
+      card: {
+        config: {
+          wide_screen_mode: true
+        },
+        header: {
+          template: alert.type === 'offline' ? 'red' : (alert.type === 'online' ? 'green' : 'blue'),
+          title: {
+            tag: 'plain_text',
+            content: `${emoji} 节点监控告警`
+          }
+        },
+        elements: [
+          {
+            tag: 'div',
+            text: {
+              tag: 'lark_md',
+              content: `**节点名称：** ${alert.nodeName}\n**节点 ID：** ${alert.nodeId}\n**告警类型：** ${alert.alertType}\n**发生时间：** ${new Date(alert.timestamp).toLocaleString('zh-CN')}`
+            }
+          },
+          {
+            tag: 'div',
+            text: {
+              tag: 'lark_md',
+              content: `**详情：** ${alert.message}`
+            }
+          },
+          {
+            tag: 'note',
+            elements: [
+              {
+                tag: 'plain_text',
+                content: `Node Monitor 自动告警系统`
+              }
+            ]
+          }
+        ]
+      }
+    };
+    
+    const postData = JSON.stringify(message);
+    
+    return new Promise((resolve, reject) => {
+      const url = new URL(alertsConfig.feishuWebhook);
+      const options = {
+        hostname: url.hostname,
+        port: 443,
+        path: url.pathname + url.search,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(postData)
+        }
+      };
+      
+      const req = https.request(options, (res) => {
+        let data = '';
+        res.on('data', chunk => data += chunk);
+        res.on('end', () => {
+          const result = JSON.parse(data);
+          if (result.StatusCode === 0 || result.code === 0) {
+            console.log(`✅ 飞书告警发送成功：${alert.nodeId} - ${alert.type}`);
+            resolve(true);
+          } else {
+            console.warn('⚠️ 飞书告警发送失败:', result);
+            resolve(false);
+          }
+        });
+      });
+      
+      req.on('error', (e) => {
+        console.error('❌ 飞书告警发送错误:', e.message);
+        resolve(false);
+      });
+      
+      req.write(postData);
+      req.end();
+    });
+  } catch (err) {
+    console.error('❌ 发送飞书告警异常:', err.message);
+    return false;
+  }
+}
+
+// 发送告警（统一入口）
+async function sendAlert(alert) {
+  if (!alertsConfig.enabled) {
+    return false;
+  }
+  
+  // 检查冷却期
+  if (isInCooldown(alert.nodeId, alert.type)) {
+    console.log(`⏰ 告警冷却期内，跳过发送：${alert.nodeId} - ${alert.type}`);
+    return false;
+  }
+  
+  console.log(`🚨 发送告警：${alert.nodeId} - ${alert.type}`);
+  
+  // 记录告警历史
+  recordAlert(alert);
+  
+  // 发送飞书通知
+  if (alertsConfig.feishuWebhook) {
+    await sendFeishuAlert(alert);
+  }
+  
+  // TODO: 邮件通知可以在未来添加
+  
+  return true;
+}
+
+// 检查节点状态变化并触发告警
+async function checkAlerts(newStatuses) {
+  if (!alertsConfig.enabled) return;
+  
+  const oldStatuses = Array.from(nodeStatusCache.values());
+  
+  for (const newNode of newStatuses) {
+    const oldNode = oldStatuses.find(s => s.id === newNode.id);
+    
+    // 状态变化检测
+    if (oldNode && oldNode.online !== newNode.online) {
+      if (!newNode.online && alertsConfig.notifyOnOffline) {
+        // 节点离线告警
+        await sendAlert({
+          nodeId: newNode.id,
+          nodeName: newNode.name,
+          type: 'offline',
+          alertType: '节点离线',
+          message: `节点 ${newNode.name} (${newNode.id}) 已离线。错误信息：${newNode.error || '未知错误'}`,
+          timestamp: new Date().toISOString(),
+          severity: 'high'
+        });
+      } else if (newNode.online && alertsConfig.notifyOnOnline) {
+        // 节点上线告警
+        await sendAlert({
+          nodeId: newNode.id,
+          nodeName: newNode.name,
+          type: 'online',
+          alertType: '节点恢复',
+          message: `节点 ${newNode.name} (${newNode.id}) 已恢复在线。响应时间：${newNode.responseTime}ms`,
+          timestamp: new Date().toISOString(),
+          severity: 'low'
+        });
+      }
+    }
   }
 }
 
@@ -1025,6 +1333,192 @@ app.delete('/api/nodes/:id', (req, res) => {
 });
 
 /**
+ * API: 获取告警配置
+ * GET /api/alerts/config
+ */
+app.get('/api/alerts/config', (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      ...alertsConfig,
+      feishuWebhook: alertsConfig.feishuWebhook ? '***已配置***' : '' // 隐藏实际 webhook
+    }
+  });
+});
+
+/**
+ * API: 更新告警配置
+ * POST /api/alerts/config
+ */
+app.post('/api/alerts/config', (req, res) => {
+  try {
+    const newConfig = req.body;
+    
+    // 更新配置
+    if (newConfig.enabled !== undefined) {
+      alertsConfig.enabled = newConfig.enabled;
+    }
+    if (newConfig.feishuWebhook !== undefined) {
+      alertsConfig.feishuWebhook = newConfig.feishuWebhook;
+    }
+    if (newConfig.notifyOnOffline !== undefined) {
+      alertsConfig.notifyOnOffline = newConfig.notifyOnOffline;
+    }
+    if (newConfig.notifyOnOnline !== undefined) {
+      alertsConfig.notifyOnOnline = newConfig.notifyOnOnline;
+    }
+    if (newConfig.cooldownMinutes !== undefined) {
+      alertsConfig.cooldownMinutes = Math.max(1, parseInt(newConfig.cooldownMinutes));
+    }
+    
+    // 保存配置
+    saveAlertsConfig();
+    
+    res.json({
+      success: true,
+      message: '告警配置已保存',
+      data: {
+        ...alertsConfig,
+        feishuWebhook: alertsConfig.feishuWebhook ? '***已配置***' : ''
+      }
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      error: '保存告警配置失败：' + err.message
+    });
+  }
+});
+
+/**
+ * API: 测试告警
+ * POST /api/alerts/test
+ */
+app.post('/api/alerts/test', async (req, res) => {
+  try {
+    if (!alertsConfig.enabled) {
+      return res.status(400).json({
+        success: false,
+        error: '告警系统未启用'
+      });
+    }
+    
+    const testAlert = {
+      nodeId: 'test-node',
+      nodeName: '测试节点',
+      type: 'test',
+      alertType: '告警测试',
+      message: '这是一条测试告警消息，用于验证告警系统是否正常工作。',
+      timestamp: new Date().toISOString(),
+      severity: 'low'
+    };
+    
+    const result = await sendAlert(testAlert);
+    
+    res.json({
+      success: result,
+      message: result ? '测试告警已发送' : '测试告警发送失败'
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      error: '测试告警失败：' + err.message
+    });
+  }
+});
+
+/**
+ * API: 获取告警历史
+ * GET /api/alerts/history
+ * 
+ * 查询参数：
+ * - limit: 返回记录数量（默认 50，最大 200）
+ * - nodeId: 筛选特定节点（可选）
+ * - type: 筛选告警类型（offline/online/test）（可选）
+ * - severity: 筛选严重程度（high/low）（可选）
+ */
+app.get('/api/alerts/history', (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+    const nodeId = req.query.nodeId;
+    const type = req.query.type;
+    const severity = req.query.severity;
+    
+    if (!fs.existsSync(alertsHistoryPath)) {
+      return res.json({
+        success: true,
+        data: {
+          alerts: [],
+          total: 0
+        }
+      });
+    }
+    
+    let historyData = JSON.parse(fs.readFileSync(alertsHistoryPath, 'utf8'));
+    let alerts = historyData.alerts || [];
+    
+    // 筛选
+    if (nodeId) {
+      alerts = alerts.filter(a => a.nodeId === nodeId);
+    }
+    if (type) {
+      alerts = alerts.filter(a => a.type === type);
+    }
+    if (severity) {
+      alerts = alerts.filter(a => a.severity === severity);
+    }
+    
+    // 限制返回数量
+    const total = alerts.length;
+    alerts = alerts.slice(0, limit);
+    
+    res.json({
+      success: true,
+      data: {
+        alerts,
+        total,
+        limit
+      }
+    });
+  } catch (err) {
+    console.error('❌ 获取告警历史失败:', err.message);
+    res.status(500).json({
+      success: false,
+      error: '获取告警历史失败：' + err.message
+    });
+  }
+});
+
+/**
+ * API: 清除告警历史
+ * POST /api/alerts/history/clear
+ */
+app.post('/api/alerts/history/clear', (req, res) => {
+  try {
+    if (fs.existsSync(alertsHistoryPath)) {
+      const initialData = {
+        version: '1.0',
+        createdAt: new Date().toISOString(),
+        alerts: []
+      };
+      fs.writeFileSync(alertsHistoryPath, JSON.stringify(initialData, null, 2));
+      console.log('🗑️ 告警历史已清除');
+    }
+    
+    res.json({
+      success: true,
+      message: '告警历史已清除'
+    });
+  } catch (err) {
+    console.error('❌ 清除告警历史失败:', err.message);
+    res.status(500).json({
+      success: false,
+      error: '清除告警历史失败：' + err.message
+    });
+  }
+});
+
+/**
  * 格式化字节数为人类可读格式
  * @param {number} bytes - 字节数
  * @returns {string} 格式化后的字符串
@@ -1078,6 +1572,7 @@ function startHealthCheckScheduler() {
     console.log(`✅ 初始健康检查完成：${onlineCount}/${configuredCount} 节点在线（共 ${statuses.length} 个 agent）`);
     // 保存初始快照
     saveHistorySnapshot(statuses);
+    // 初始化时不触发告警（避免启动时大量告警）
   });
   
   // 定时执行
@@ -1088,6 +1583,8 @@ function startHealthCheckScheduler() {
       console.log(`📊 健康检查：${onlineCount}/${configuredCount} 节点在线`);
       // 保存历史快照
       saveHistorySnapshot(statuses);
+      // 检查是否需要发送告警
+      checkAlerts(statuses);
     });
   }, interval);
 }
@@ -1107,6 +1604,9 @@ app.listen(PORT, () => {
   
   // 初始化历史数据存储
   initHistoryStorage();
+  
+  // 初始化告警系统
+  initAlertsSystem();
   
   // 启动健康检查调度器
   startHealthCheckScheduler();
