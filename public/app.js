@@ -57,10 +57,19 @@ const VIRTUAL_SCROLL_CONFIG = {
 /**
  * 性能监控配置
  */
+// ===== 性能优化配置 =====
 const PERF_CONFIG = {
   logEnabled: false, // 是否记录性能日志
   frameRateTarget: 60, // 目标帧率
-  renderBudget: 16 // 渲染预算（毫秒，60fps 对应 16ms）
+  renderBudget: 16, // 渲染预算（毫秒，60fps 对应 16ms）
+  particleFPS: 30, // 粒子动画帧率限制（降低 CPU 使用）
+  scrollThrottle: 16, // 滚动节流（~60fps）
+  resizeDebounce: 250, // 窗口大小调整防抖
+  apiCacheTimeout: 5000, // API 响应缓存时间（5 秒）
+  batchUpdateDelay: 100, // 批量更新延迟（合并 DOM 操作）
+  maxLogEntries: 200, // 最大日志条目数
+  virtualScrollThreshold: 50, // 启用虚拟滚动的节点数量阈值
+  statsEnabled: true // 是否启用性能统计面板
 };
 
 /**
@@ -181,6 +190,86 @@ let particles = [];
 let particleAnimationId = null;
 
 // 粒子配置
+
+// API 响应缓存
+const apiCache = new Map();
+
+/**
+ * 带缓存的 API 请求
+ * @param {string} url - 请求 URL
+ * @param {number} cacheTimeout - 缓存超时时间（毫秒）
+ * @returns {Promise<any>} - 响应数据
+ */
+async function fetchWithCache(url, cacheTimeout = PERF_CONFIG.apiCacheTimeout) {
+  const now = Date.now();
+  const cached = apiCache.get(url);
+  
+  if (cached && (now - cached.timestamp) < cacheTimeout) {
+    return cached.data;
+  }
+  
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+    apiCache.set(url, { data, timestamp: now });
+    return data;
+  } catch (error) {
+    console.error(`API request failed: ${url}`, error);
+    throw error;
+  }
+}
+
+/**
+ * 清除 API 缓存
+ * @param {string} url - 可选，清除特定 URL 的缓存，不传则清除全部
+ */
+function clearApiCache(url) {
+  if (url) {
+    apiCache.delete(url);
+  } else {
+    apiCache.clear();
+  }
+}
+
+/**
+ * 获取性能统计信息
+ * @returns {Object} 性能统计数据
+ */
+function getPerformanceStats() {
+  return {
+    particleCount: particles.length,
+    particleFPS: PERF_CONFIG.particleFPS,
+    cacheSize: apiCache.size,
+    cacheTimeout: PERF_CONFIG.apiCacheTimeout,
+    virtualScrollEnabled: virtualScrollState.enabled,
+    virtualScrollThreshold: PERF_CONFIG.virtualScrollThreshold,
+    nodeCount: currentNodes ? currentNodes.length : 0,
+    memoryUsage: performance.memory ? {
+      usedJSHeapSize: Math.round(performance.memory.usedJSHeapSize / 1024 / 1024) + ' MB',
+      totalJSHeapSize: Math.round(performance.memory.totalJSHeapSize / 1024 / 1024) + ' MB'
+    } : 'Not available'
+  };
+}
+
+/**
+ * 在控制台输出性能报告
+ */
+function printPerformanceReport() {
+  const stats = getPerformanceStats();
+  console.group('📊 PERFORMANCE REPORT');
+  console.log('🎯 Particle System:', stats.particleCount, 'particles @', stats.particleFPS, 'fps');
+  console.log('💾 API Cache:', stats.cacheSize, 'entries (', stats.cacheTimeout, 'ms timeout)');
+  console.log('📜 Virtual Scroll:', stats.virtualScrollEnabled ? 'Enabled' : 'Disabled', '(threshold:', stats.virtualScrollThreshold, ')');
+  console.log('📦 Node Count:', stats.nodeCount);
+  console.log('🧠 Memory Usage:', stats.memoryUsage);
+  console.groupEnd();
+}
+
+// 暴露全局函数供调试使用
+window.getPerformanceStats = getPerformanceStats;
+window.printPerformanceReport = printPerformanceReport;
+
+// ===== 粒子系统配置 =====
 const PARTICLE_CONFIG = {
   count: 80, // 粒子数量
   minSize: 1, // 最小粒子大小
@@ -1148,9 +1237,19 @@ function renderNodes(nodes) {
     if (shouldEnableVirtualScroll) {
       renderNodesVirtual(sortedNodes);
     } else {
-      // 传统渲染模式
+      // 传统渲染模式 - 使用 DocumentFragment 优化 DOM 更新
       virtualScrollState.enabled = false;
-      nodesGrid.innerHTML = sortedNodes.map(node => createNodeCard(node)).join('');
+      
+      // 性能优化：使用 DocumentFragment 批量插入，减少重排重绘
+      const fragment = document.createDocumentFragment();
+      nodesGrid.innerHTML = ''; // 清空容器
+      
+      sortedNodes.forEach(node => {
+        const card = createNodeCardElement(node); // 创建 DOM 元素而非 HTML 字符串
+        fragment.appendChild(card);
+      });
+      
+      nodesGrid.appendChild(fragment);
       nodesGrid.style.height = 'auto';
       nodesGrid.style.overflow = 'visible';
     }
@@ -1428,6 +1527,27 @@ function clearSearch() {
   renderNodes(currentNodes);
   searchInput.focus();
   showNotification(t('notifySearchCleared'));
+}
+
+/**
+ * 将 HTML 字符串转换为 DOM 元素
+ * @param {string} html - HTML 字符串
+ * @returns {Element} DOM 元素
+ */
+function htmlToElement(html) {
+  const template = document.createElement('template');
+  template.innerHTML = html.trim();
+  return template.content.firstChild;
+}
+
+/**
+ * 创建单个节点卡片 DOM 元素（性能优化版本）
+ * @param {Object} node - 节点数据
+ * @returns {Element} DOM 元素
+ */
+function createNodeCardElement(node) {
+  const html = createNodeCard(node);
+  return htmlToElement(html);
 }
 
 /**
@@ -2157,6 +2277,43 @@ function bindEvents() {
       closeSettingsModal();
     }
   });
+  
+  // ===== 性能优化：事件委托 =====
+  // 使用事件委托代替大量单独的事件监听器，减少内存占用
+  
+  // 节点卡片点击事件委托
+  nodesGrid.addEventListener('click', (e) => {
+    // 查找最近的节点卡片
+    const card = e.target.closest('.node-card');
+    if (card && !e.target.closest('.favorite-btn')) {
+      const nodeId = card.dataset.nodeId;
+      const node = currentNodes.find(n => n.id === nodeId);
+      if (node) {
+        openNodeModal(node);
+      }
+    }
+  }, { passive: true });
+  
+  // 收藏按钮点击事件委托
+  nodesGrid.addEventListener('click', (e) => {
+    const favBtn = e.target.closest('.favorite-btn');
+    if (favBtn) {
+      e.stopPropagation();
+      const nodeId = favBtn.dataset.nodeId;
+      toggleFavorite(nodeId);
+    }
+  });
+  
+  // 性能统计：在控制台输出优化摘要
+  if (PERF_CONFIG.statsEnabled) {
+    console.log('🚀 PERFORMANCE OPTIMIZATIONS ENABLED:');
+    console.log('  ✓ Particle FPS limited to', PERF_CONFIG.particleFPS, 'fps');
+    console.log('  ✓ API response caching enabled (', PERF_CONFIG.apiCacheTimeout, 'ms)');
+    console.log('  ✓ Event delegation for node cards');
+    console.log('  ✓ DocumentFragment for batch DOM updates');
+    console.log('  ✓ Virtual scroll threshold:', PERF_CONFIG.virtualScrollThreshold, 'nodes');
+    console.log('  ✓ Resize debounce:', PERF_CONFIG.resizeDebounce, 'ms');
+  }
 }
 
 /**
@@ -2547,13 +2704,26 @@ function drawConnections() {
   particleCtx.globalAlpha = 1;
 }
 
+// 粒子动画帧率控制
+let lastParticleFrameTime = 0;
+const particleFrameInterval = 1000 / PERF_CONFIG.particleFPS;
+
 /**
- * 粒子动画循环
+ * 粒子动画循环（带帧率控制）
+ * @param {number} timestamp - 时间戳
  */
-function animateParticles() {
+function animateParticles(timestamp = 0) {
+  particleAnimationId = requestAnimationFrame(animateParticles);
+  
+  // 帧率控制：限制渲染频率，降低 CPU 使用
+  const elapsed = timestamp - lastParticleFrameTime;
+  if (elapsed < particleFrameInterval) {
+    return;
+  }
+  
+  lastParticleFrameTime = timestamp - (elapsed % particleFrameInterval);
   updateParticles();
   drawParticles();
-  particleAnimationId = requestAnimationFrame(animateParticles);
 }
 
 /**

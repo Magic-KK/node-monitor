@@ -1,7 +1,7 @@
 {
   "name": "node-monitor",
-  "version": "1.26.0",
-  "description": "J.A.R.V.I.S. 团队节点状态监控服务 - 性能优化版本",
+  "version": "1.27.0",
+  "description": "J.A.R.V.I.S. 团队节点状态监控服务 - 性能优化增强版",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

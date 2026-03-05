@@ -3,6 +3,1944 @@
   "createdAt": "2026-03-05T10:57:39.976Z",
   "records": [
     {
+      "timestamp": "2026-03-05T14:23:32.960Z",
+      "nodes": [
+        {
+          "id": "main",
+          "name": "main",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "main-bot",
+          "name": "J.A.R.V.I.S.",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "coder-bot",
+          "name": "牛开发",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "researcher-bot",
+          "name": "researcher-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "writer-bot",
+          "name": "writer-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        }
+      ],
+      "summary": {
+        "totalNodes": 5,
+        "onlineCount": 2,
+        "offlineCount": 3,
+        "configuredCount": 2
+      }
+    },
+    {
+      "timestamp": "2026-03-05T14:23:02.956Z",
+      "nodes": [
+        {
+          "id": "main",
+          "name": "main",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "main-bot",
+          "name": "J.A.R.V.I.S.",
+          "online": true,
+          "configured": true,
+          "responseTime": 1,
+          "error": null
+        },
+        {
+          "id": "coder-bot",
+          "name": "牛开发",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "researcher-bot",
+          "name": "researcher-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "writer-bot",
+          "name": "writer-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        }
+      ],
+      "summary": {
+        "totalNodes": 5,
+        "onlineCount": 2,
+        "offlineCount": 3,
+        "configuredCount": 2
+      }
+    },
+    {
+      "timestamp": "2026-03-05T14:22:32.958Z",
+      "nodes": [
+        {
+          "id": "main",
+          "name": "main",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "main-bot",
+          "name": "J.A.R.V.I.S.",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "coder-bot",
+          "name": "牛开发",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "researcher-bot",
+          "name": "researcher-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "writer-bot",
+          "name": "writer-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        }
+      ],
+      "summary": {
+        "totalNodes": 5,
+        "onlineCount": 2,
+        "offlineCount": 3,
+        "configuredCount": 2
+      }
+    },
+    {
+      "timestamp": "2026-03-05T14:22:02.958Z",
+      "nodes": [
+        {
+          "id": "main",
+          "name": "main",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "main-bot",
+          "name": "J.A.R.V.I.S.",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "coder-bot",
+          "name": "牛开发",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "researcher-bot",
+          "name": "researcher-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "writer-bot",
+          "name": "writer-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        }
+      ],
+      "summary": {
+        "totalNodes": 5,
+        "onlineCount": 2,
+        "offlineCount": 3,
+        "configuredCount": 2
+      }
+    },
+    {
+      "timestamp": "2026-03-05T14:21:32.955Z",
+      "nodes": [
+        {
+          "id": "main",
+          "name": "main",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "main-bot",
+          "name": "J.A.R.V.I.S.",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "coder-bot",
+          "name": "牛开发",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "researcher-bot",
+          "name": "researcher-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "writer-bot",
+          "name": "writer-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        }
+      ],
+      "summary": {
+        "totalNodes": 5,
+        "onlineCount": 2,
+        "offlineCount": 3,
+        "configuredCount": 2
+      }
+    },
+    {
+      "timestamp": "2026-03-05T14:21:02.954Z",
+      "nodes": [
+        {
+          "id": "main",
+          "name": "main",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "main-bot",
+          "name": "J.A.R.V.I.S.",
+          "online": true,
+          "configured": true,
+          "responseTime": 1,
+          "error": null
+        },
+        {
+          "id": "coder-bot",
+          "name": "牛开发",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "researcher-bot",
+          "name": "researcher-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "writer-bot",
+          "name": "writer-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        }
+      ],
+      "summary": {
+        "totalNodes": 5,
+        "onlineCount": 2,
+        "offlineCount": 3,
+        "configuredCount": 2
+      }
+    },
+    {
+      "timestamp": "2026-03-05T14:20:32.950Z",
+      "nodes": [
+        {
+          "id": "main",
+          "name": "main",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "main-bot",
+          "name": "J.A.R.V.I.S.",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "coder-bot",
+          "name": "牛开发",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "researcher-bot",
+          "name": "researcher-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "writer-bot",
+          "name": "writer-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        }
+      ],
+      "summary": {
+        "totalNodes": 5,
+        "onlineCount": 2,
+        "offlineCount": 3,
+        "configuredCount": 2
+      }
+    },
+    {
+      "timestamp": "2026-03-05T14:20:02.950Z",
+      "nodes": [
+        {
+          "id": "main",
+          "name": "main",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "main-bot",
+          "name": "J.A.R.V.I.S.",
+          "online": true,
+          "configured": true,
+          "responseTime": 1,
+          "error": null
+        },
+        {
+          "id": "coder-bot",
+          "name": "牛开发",
+          "online": true,
+          "configured": true,
+          "responseTime": 1,
+          "error": null
+        },
+        {
+          "id": "researcher-bot",
+          "name": "researcher-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "writer-bot",
+          "name": "writer-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        }
+      ],
+      "summary": {
+        "totalNodes": 5,
+        "onlineCount": 2,
+        "offlineCount": 3,
+        "configuredCount": 2
+      }
+    },
+    {
+      "timestamp": "2026-03-05T14:19:32.948Z",
+      "nodes": [
+        {
+          "id": "main",
+          "name": "main",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "main-bot",
+          "name": "J.A.R.V.I.S.",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "coder-bot",
+          "name": "牛开发",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "researcher-bot",
+          "name": "researcher-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "writer-bot",
+          "name": "writer-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        }
+      ],
+      "summary": {
+        "totalNodes": 5,
+        "onlineCount": 2,
+        "offlineCount": 3,
+        "configuredCount": 2
+      }
+    },
+    {
+      "timestamp": "2026-03-05T14:19:02.946Z",
+      "nodes": [
+        {
+          "id": "main",
+          "name": "main",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "main-bot",
+          "name": "J.A.R.V.I.S.",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "coder-bot",
+          "name": "牛开发",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "researcher-bot",
+          "name": "researcher-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "writer-bot",
+          "name": "writer-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        }
+      ],
+      "summary": {
+        "totalNodes": 5,
+        "onlineCount": 2,
+        "offlineCount": 3,
+        "configuredCount": 2
+      }
+    },
+    {
+      "timestamp": "2026-03-05T14:18:32.944Z",
+      "nodes": [
+        {
+          "id": "main",
+          "name": "main",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "main-bot",
+          "name": "J.A.R.V.I.S.",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "coder-bot",
+          "name": "牛开发",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "researcher-bot",
+          "name": "researcher-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "writer-bot",
+          "name": "writer-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        }
+      ],
+      "summary": {
+        "totalNodes": 5,
+        "onlineCount": 2,
+        "offlineCount": 3,
+        "configuredCount": 2
+      }
+    },
+    {
+      "timestamp": "2026-03-05T14:18:02.941Z",
+      "nodes": [
+        {
+          "id": "main",
+          "name": "main",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "main-bot",
+          "name": "J.A.R.V.I.S.",
+          "online": true,
+          "configured": true,
+          "responseTime": 1,
+          "error": null
+        },
+        {
+          "id": "coder-bot",
+          "name": "牛开发",
+          "online": true,
+          "configured": true,
+          "responseTime": 1,
+          "error": null
+        },
+        {
+          "id": "researcher-bot",
+          "name": "researcher-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "writer-bot",
+          "name": "writer-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        }
+      ],
+      "summary": {
+        "totalNodes": 5,
+        "onlineCount": 2,
+        "offlineCount": 3,
+        "configuredCount": 2
+      }
+    },
+    {
+      "timestamp": "2026-03-05T14:17:32.941Z",
+      "nodes": [
+        {
+          "id": "main",
+          "name": "main",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "main-bot",
+          "name": "J.A.R.V.I.S.",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "coder-bot",
+          "name": "牛开发",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "researcher-bot",
+          "name": "researcher-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "writer-bot",
+          "name": "writer-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        }
+      ],
+      "summary": {
+        "totalNodes": 5,
+        "onlineCount": 2,
+        "offlineCount": 3,
+        "configuredCount": 2
+      }
+    },
+    {
+      "timestamp": "2026-03-05T14:17:02.939Z",
+      "nodes": [
+        {
+          "id": "main",
+          "name": "main",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "main-bot",
+          "name": "J.A.R.V.I.S.",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "coder-bot",
+          "name": "牛开发",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "researcher-bot",
+          "name": "researcher-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "writer-bot",
+          "name": "writer-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        }
+      ],
+      "summary": {
+        "totalNodes": 5,
+        "onlineCount": 2,
+        "offlineCount": 3,
+        "configuredCount": 2
+      }
+    },
+    {
+      "timestamp": "2026-03-05T14:16:32.937Z",
+      "nodes": [
+        {
+          "id": "main",
+          "name": "main",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "main-bot",
+          "name": "J.A.R.V.I.S.",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "coder-bot",
+          "name": "牛开发",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "researcher-bot",
+          "name": "researcher-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "writer-bot",
+          "name": "writer-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        }
+      ],
+      "summary": {
+        "totalNodes": 5,
+        "onlineCount": 2,
+        "offlineCount": 3,
+        "configuredCount": 2
+      }
+    },
+    {
+      "timestamp": "2026-03-05T14:16:02.939Z",
+      "nodes": [
+        {
+          "id": "main",
+          "name": "main",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "main-bot",
+          "name": "J.A.R.V.I.S.",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "coder-bot",
+          "name": "牛开发",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "researcher-bot",
+          "name": "researcher-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "writer-bot",
+          "name": "writer-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        }
+      ],
+      "summary": {
+        "totalNodes": 5,
+        "onlineCount": 2,
+        "offlineCount": 3,
+        "configuredCount": 2
+      }
+    },
+    {
+      "timestamp": "2026-03-05T14:15:32.936Z",
+      "nodes": [
+        {
+          "id": "main",
+          "name": "main",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "main-bot",
+          "name": "J.A.R.V.I.S.",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "coder-bot",
+          "name": "牛开发",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "researcher-bot",
+          "name": "researcher-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "writer-bot",
+          "name": "writer-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        }
+      ],
+      "summary": {
+        "totalNodes": 5,
+        "onlineCount": 2,
+        "offlineCount": 3,
+        "configuredCount": 2
+      }
+    },
+    {
+      "timestamp": "2026-03-05T14:15:02.934Z",
+      "nodes": [
+        {
+          "id": "main",
+          "name": "main",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "main-bot",
+          "name": "J.A.R.V.I.S.",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "coder-bot",
+          "name": "牛开发",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "researcher-bot",
+          "name": "researcher-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "writer-bot",
+          "name": "writer-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        }
+      ],
+      "summary": {
+        "totalNodes": 5,
+        "onlineCount": 2,
+        "offlineCount": 3,
+        "configuredCount": 2
+      }
+    },
+    {
+      "timestamp": "2026-03-05T14:14:32.932Z",
+      "nodes": [
+        {
+          "id": "main",
+          "name": "main",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "main-bot",
+          "name": "J.A.R.V.I.S.",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "coder-bot",
+          "name": "牛开发",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "researcher-bot",
+          "name": "researcher-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "writer-bot",
+          "name": "writer-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        }
+      ],
+      "summary": {
+        "totalNodes": 5,
+        "onlineCount": 2,
+        "offlineCount": 3,
+        "configuredCount": 2
+      }
+    },
+    {
+      "timestamp": "2026-03-05T14:14:02.932Z",
+      "nodes": [
+        {
+          "id": "main",
+          "name": "main",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "main-bot",
+          "name": "J.A.R.V.I.S.",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "coder-bot",
+          "name": "牛开发",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "researcher-bot",
+          "name": "researcher-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "writer-bot",
+          "name": "writer-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        }
+      ],
+      "summary": {
+        "totalNodes": 5,
+        "onlineCount": 2,
+        "offlineCount": 3,
+        "configuredCount": 2
+      }
+    },
+    {
+      "timestamp": "2026-03-05T14:13:32.932Z",
+      "nodes": [
+        {
+          "id": "main",
+          "name": "main",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "main-bot",
+          "name": "J.A.R.V.I.S.",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "coder-bot",
+          "name": "牛开发",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "researcher-bot",
+          "name": "researcher-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "writer-bot",
+          "name": "writer-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        }
+      ],
+      "summary": {
+        "totalNodes": 5,
+        "onlineCount": 2,
+        "offlineCount": 3,
+        "configuredCount": 2
+      }
+    },
+    {
+      "timestamp": "2026-03-05T14:13:02.933Z",
+      "nodes": [
+        {
+          "id": "main",
+          "name": "main",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "main-bot",
+          "name": "J.A.R.V.I.S.",
+          "online": true,
+          "configured": true,
+          "responseTime": 1,
+          "error": null
+        },
+        {
+          "id": "coder-bot",
+          "name": "牛开发",
+          "online": true,
+          "configured": true,
+          "responseTime": 1,
+          "error": null
+        },
+        {
+          "id": "researcher-bot",
+          "name": "researcher-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "writer-bot",
+          "name": "writer-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        }
+      ],
+      "summary": {
+        "totalNodes": 5,
+        "onlineCount": 2,
+        "offlineCount": 3,
+        "configuredCount": 2
+      }
+    },
+    {
+      "timestamp": "2026-03-05T14:12:32.930Z",
+      "nodes": [
+        {
+          "id": "main",
+          "name": "main",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "main-bot",
+          "name": "J.A.R.V.I.S.",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "coder-bot",
+          "name": "牛开发",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "researcher-bot",
+          "name": "researcher-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "writer-bot",
+          "name": "writer-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        }
+      ],
+      "summary": {
+        "totalNodes": 5,
+        "onlineCount": 2,
+        "offlineCount": 3,
+        "configuredCount": 2
+      }
+    },
+    {
+      "timestamp": "2026-03-05T14:12:02.930Z",
+      "nodes": [
+        {
+          "id": "main",
+          "name": "main",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "main-bot",
+          "name": "J.A.R.V.I.S.",
+          "online": true,
+          "configured": true,
+          "responseTime": 1,
+          "error": null
+        },
+        {
+          "id": "coder-bot",
+          "name": "牛开发",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "researcher-bot",
+          "name": "researcher-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "writer-bot",
+          "name": "writer-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        }
+      ],
+      "summary": {
+        "totalNodes": 5,
+        "onlineCount": 2,
+        "offlineCount": 3,
+        "configuredCount": 2
+      }
+    },
+    {
+      "timestamp": "2026-03-05T14:11:32.928Z",
+      "nodes": [
+        {
+          "id": "main",
+          "name": "main",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "main-bot",
+          "name": "J.A.R.V.I.S.",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "coder-bot",
+          "name": "牛开发",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "researcher-bot",
+          "name": "researcher-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "writer-bot",
+          "name": "writer-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        }
+      ],
+      "summary": {
+        "totalNodes": 5,
+        "onlineCount": 2,
+        "offlineCount": 3,
+        "configuredCount": 2
+      }
+    },
+    {
+      "timestamp": "2026-03-05T14:11:02.929Z",
+      "nodes": [
+        {
+          "id": "main",
+          "name": "main",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "main-bot",
+          "name": "J.A.R.V.I.S.",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "coder-bot",
+          "name": "牛开发",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "researcher-bot",
+          "name": "researcher-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "writer-bot",
+          "name": "writer-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        }
+      ],
+      "summary": {
+        "totalNodes": 5,
+        "onlineCount": 2,
+        "offlineCount": 3,
+        "configuredCount": 2
+      }
+    },
+    {
+      "timestamp": "2026-03-05T14:10:32.926Z",
+      "nodes": [
+        {
+          "id": "main",
+          "name": "main",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "main-bot",
+          "name": "J.A.R.V.I.S.",
+          "online": true,
+          "configured": true,
+          "responseTime": 1,
+          "error": null
+        },
+        {
+          "id": "coder-bot",
+          "name": "牛开发",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "researcher-bot",
+          "name": "researcher-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "writer-bot",
+          "name": "writer-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        }
+      ],
+      "summary": {
+        "totalNodes": 5,
+        "onlineCount": 2,
+        "offlineCount": 3,
+        "configuredCount": 2
+      }
+    },
+    {
+      "timestamp": "2026-03-05T14:10:02.920Z",
+      "nodes": [
+        {
+          "id": "main",
+          "name": "main",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "main-bot",
+          "name": "J.A.R.V.I.S.",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "coder-bot",
+          "name": "牛开发",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "researcher-bot",
+          "name": "researcher-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "writer-bot",
+          "name": "writer-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        }
+      ],
+      "summary": {
+        "totalNodes": 5,
+        "onlineCount": 2,
+        "offlineCount": 3,
+        "configuredCount": 2
+      }
+    },
+    {
+      "timestamp": "2026-03-05T14:09:37.414Z",
+      "nodes": [
+        {
+          "id": "main",
+          "name": "main",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "main-bot",
+          "name": "J.A.R.V.I.S.",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "coder-bot",
+          "name": "牛开发",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "researcher-bot",
+          "name": "researcher-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "writer-bot",
+          "name": "writer-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        }
+      ],
+      "summary": {
+        "totalNodes": 5,
+        "onlineCount": 2,
+        "offlineCount": 3,
+        "configuredCount": 2
+      }
+    },
+    {
+      "timestamp": "2026-03-05T14:09:07.412Z",
+      "nodes": [
+        {
+          "id": "main",
+          "name": "main",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "main-bot",
+          "name": "J.A.R.V.I.S.",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "coder-bot",
+          "name": "牛开发",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "researcher-bot",
+          "name": "researcher-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "writer-bot",
+          "name": "writer-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        }
+      ],
+      "summary": {
+        "totalNodes": 5,
+        "onlineCount": 2,
+        "offlineCount": 3,
+        "configuredCount": 2
+      }
+    },
+    {
+      "timestamp": "2026-03-05T14:08:37.411Z",
+      "nodes": [
+        {
+          "id": "main",
+          "name": "main",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "main-bot",
+          "name": "J.A.R.V.I.S.",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "coder-bot",
+          "name": "牛开发",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "researcher-bot",
+          "name": "researcher-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "writer-bot",
+          "name": "writer-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        }
+      ],
+      "summary": {
+        "totalNodes": 5,
+        "onlineCount": 2,
+        "offlineCount": 3,
+        "configuredCount": 2
+      }
+    },
+    {
+      "timestamp": "2026-03-05T14:08:07.409Z",
+      "nodes": [
+        {
+          "id": "main",
+          "name": "main",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "main-bot",
+          "name": "J.A.R.V.I.S.",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "coder-bot",
+          "name": "牛开发",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "researcher-bot",
+          "name": "researcher-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "writer-bot",
+          "name": "writer-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        }
+      ],
+      "summary": {
+        "totalNodes": 5,
+        "onlineCount": 2,
+        "offlineCount": 3,
+        "configuredCount": 2
+      }
+    },
+    {
+      "timestamp": "2026-03-05T14:07:37.407Z",
+      "nodes": [
+        {
+          "id": "main",
+          "name": "main",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "main-bot",
+          "name": "J.A.R.V.I.S.",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "coder-bot",
+          "name": "牛开发",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "researcher-bot",
+          "name": "researcher-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "writer-bot",
+          "name": "writer-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        }
+      ],
+      "summary": {
+        "totalNodes": 5,
+        "onlineCount": 2,
+        "offlineCount": 3,
+        "configuredCount": 2
+      }
+    },
+    {
+      "timestamp": "2026-03-05T14:07:07.407Z",
+      "nodes": [
+        {
+          "id": "main",
+          "name": "main",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "main-bot",
+          "name": "J.A.R.V.I.S.",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "coder-bot",
+          "name": "牛开发",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "researcher-bot",
+          "name": "researcher-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "writer-bot",
+          "name": "writer-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        }
+      ],
+      "summary": {
+        "totalNodes": 5,
+        "onlineCount": 2,
+        "offlineCount": 3,
+        "configuredCount": 2
+      }
+    },
+    {
+      "timestamp": "2026-03-05T14:06:37.404Z",
+      "nodes": [
+        {
+          "id": "main",
+          "name": "main",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "main-bot",
+          "name": "J.A.R.V.I.S.",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "coder-bot",
+          "name": "牛开发",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "researcher-bot",
+          "name": "researcher-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "writer-bot",
+          "name": "writer-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        }
+      ],
+      "summary": {
+        "totalNodes": 5,
+        "onlineCount": 2,
+        "offlineCount": 3,
+        "configuredCount": 2
+      }
+    },
+    {
+      "timestamp": "2026-03-05T14:06:07.403Z",
+      "nodes": [
+        {
+          "id": "main",
+          "name": "main",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "main-bot",
+          "name": "J.A.R.V.I.S.",
+          "online": true,
+          "configured": true,
+          "responseTime": 1,
+          "error": null
+        },
+        {
+          "id": "coder-bot",
+          "name": "牛开发",
+          "online": true,
+          "configured": true,
+          "responseTime": 1,
+          "error": null
+        },
+        {
+          "id": "researcher-bot",
+          "name": "researcher-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "writer-bot",
+          "name": "writer-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        }
+      ],
+      "summary": {
+        "totalNodes": 5,
+        "onlineCount": 2,
+        "offlineCount": 3,
+        "configuredCount": 2
+      }
+    },
+    {
+      "timestamp": "2026-03-05T14:05:37.402Z",
+      "nodes": [
+        {
+          "id": "main",
+          "name": "main",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "main-bot",
+          "name": "J.A.R.V.I.S.",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "coder-bot",
+          "name": "牛开发",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "researcher-bot",
+          "name": "researcher-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "writer-bot",
+          "name": "writer-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        }
+      ],
+      "summary": {
+        "totalNodes": 5,
+        "onlineCount": 2,
+        "offlineCount": 3,
+        "configuredCount": 2
+      }
+    },
+    {
+      "timestamp": "2026-03-05T14:05:07.399Z",
+      "nodes": [
+        {
+          "id": "main",
+          "name": "main",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "main-bot",
+          "name": "J.A.R.V.I.S.",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "coder-bot",
+          "name": "牛开发",
+          "online": true,
+          "configured": true,
+          "responseTime": 0,
+          "error": null
+        },
+        {
+          "id": "researcher-bot",
+          "name": "researcher-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        },
+        {
+          "id": "writer-bot",
+          "name": "writer-bot",
+          "online": false,
+          "configured": false,
+          "responseTime": null,
+          "error": "未配置（appId 无效）"
+        }
+      ],
+      "summary": {
+        "totalNodes": 5,
+        "onlineCount": 2,
+        "offlineCount": 3,
+        "configuredCount": 2
+      }
+    },
+    {
       "timestamp": "2026-03-05T14:04:37.400Z",
       "nodes": [
         {
