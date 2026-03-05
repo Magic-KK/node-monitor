@@ -38,6 +38,55 @@
       </div>
     </header>
 
+    <!-- 系统指标面板 -->
+    <div class="system-metrics">
+      <div class="metric-card">
+        <div class="metric-header">
+          <span class="metric-icon">🖥️</span>
+          <span class="metric-title">CPU 使用率</span>
+        </div>
+        <div class="metric-value">
+          <span id="cpuUsage">--</span>
+          <span class="metric-unit">%</span>
+        </div>
+        <div class="metric-bar">
+          <div class="metric-bar-fill" id="cpuBar"></div>
+        </div>
+      </div>
+      
+      <div class="metric-card">
+        <div class="metric-header">
+          <span class="metric-icon">💾</span>
+          <span class="metric-title">内存使用率</span>
+        </div>
+        <div class="metric-value">
+          <span id="memoryUsage">--</span>
+          <span class="metric-unit">%</span>
+        </div>
+        <div class="metric-bar">
+          <div class="metric-bar-fill" id="memoryBar"></div>
+        </div>
+        <div class="metric-detail" id="memoryDetail">-- / --</div>
+      </div>
+      
+      <div class="metric-card">
+        <div class="metric-header">
+          <span class="metric-icon">⏱️</span>
+          <span class="metric-title">运行时间</span>
+        </div>
+        <div class="metric-value" id="uptime">--</div>
+        <div class="metric-detail" id="platformDetail">--</div>
+      </div>
+      
+      <div class="metric-card">
+        <div class="metric-header">
+          <span class="metric-icon">📊</span>
+          <span class="metric-title">最后更新</span>
+        </div>
+        <div class="metric-value" id="metricsLastUpdate">--</div>
+      </div>
+    </div>
+
     <!-- 控制栏 -->
     <div class="controls">
       <div class="search-box">

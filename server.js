@@ -15,6 +15,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const http = require('http');
+const os = require('os');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -153,6 +154,77 @@ function buildRealNodeList() {
 
 // 节点状态缓存（内存存储）
 const nodeStatusCache = new Map();
+
+// 系统指标缓存（CPU/内存等）
+const systemMetricsCache = {
+  cpu: 0,
+  memory: {
+    used: 0,
+    total: os.totalmem(),
+    percent: 0
+  },
+  uptime: os.uptime(),
+  platform: os.platform(),
+  arch: os.arch(),
+  lastUpdate: new Date().toISOString()
+};
+
+/**
+ * 获取系统 CPU 使用率
+ * @returns {number} CPU 使用率百分比 (0-100)
+ */
+function getCPUUsage() {
+  const cpus = os.cpus();
+  let totalIdle = 0;
+  let total = 0;
+  
+  cpus.forEach(cpu => {
+    const times = cpu.times;
+    totalIdle += times.idle;
+    total += times.user + times.nice + times.sys + times.idle + times.irq;
+  });
+  
+  // 计算使用率（简化版本，实际生产环境建议使用更精确的采样方法）
+  const idle = totalIdle / cpus.length;
+  const usage = ((total - idle) / total) * 100;
+  
+  return Math.min(100, Math.max(0, usage));
+}
+
+/**
+ * 获取系统内存使用情况
+ * @returns {Object} 内存使用信息
+ */
+function getMemoryUsage() {
+  const total = os.totalmem();
+  const free = os.freemem();
+  const used = total - free;
+  const percent = (used / total) * 100;
+  
+  return {
+    total,
+    used,
+    free,
+    percent: Math.round(percent * 100) / 100
+  };
+}
+
+/**
+ * 更新系统指标缓存
+ */
+function updateSystemMetrics() {
+  systemMetricsCache.cpu = Math.round(getCPUUsage() * 100) / 100;
+  systemMetricsCache.memory = getMemoryUsage();
+  systemMetricsCache.uptime = os.uptime();
+  systemMetricsCache.lastUpdate = new Date().toISOString();
+  
+  console.log(`📊 系统指标更新：CPU ${systemMetricsCache.cpu}%, 内存 ${systemMetricsCache.memory.percent}%`);
+}
+
+// 每 5 秒更新一次系统指标
+setInterval(updateSystemMetrics, 5000);
+// 初始化时立即更新一次
+updateSystemMetrics();
 
 /**
  * 健康检查函数 - 真实检测节点是否可达
@@ -381,6 +453,59 @@ app.post('/api/reload-config', (req, res) => {
     });
   }
 });
+
+/**
+ * API: 获取系统指标（CPU/内存使用率）
+ * GET /api/system-metrics
+ */
+app.get('/api/system-metrics', (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      ...systemMetricsCache,
+      memory: {
+        ...systemMetricsCache.memory,
+        totalFormatted: formatBytes(systemMetricsCache.memory.total),
+        usedFormatted: formatBytes(systemMetricsCache.memory.used),
+        freeFormatted: formatBytes(systemMetricsCache.memory.free)
+      },
+      uptimeFormatted: formatUptime(systemMetricsCache.uptime)
+    }
+  });
+});
+
+/**
+ * 格式化字节数为人类可读格式
+ * @param {number} bytes - 字节数
+ * @returns {string} 格式化后的字符串
+ */
+function formatBytes(bytes) {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+}
+
+/**
+ * 格式化运行时间为人类可读格式
+ * @param {number} seconds - 秒数
+ * @returns {string} 格式化后的字符串
+ */
+function formatUptime(seconds) {
+  const days = Math.floor(seconds / (24 * 60 * 60));
+  const hours = Math.floor((seconds % (24 * 60 * 60)) / (60 * 60));
+  const minutes = Math.floor((seconds % (60 * 60)) / 60);
+  const secs = Math.floor(seconds % 60);
+  
+  const parts = [];
+  if (days > 0) parts.push(`${days}天`);
+  if (hours > 0) parts.push(`${hours}小时`);
+  if (minutes > 0) parts.push(`${minutes}分钟`);
+  if (secs > 0 || parts.length === 0) parts.push(`${secs}秒`);
+  
+  return parts.join(' ');
+}
 
 /**
  * 首页
