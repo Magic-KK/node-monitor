@@ -127,7 +127,204 @@ body {
   opacity: 0.4;
 }
 
-/* 网格背景 */
+/* ===== 全屏加载动画 ===== */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(ellipse at center, var(--bg-primary) 0%, var(--bg-dark) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  transition: opacity 0.5s ease, visibility 0.5s ease;
+}
+
+.loading-overlay.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.loading-content {
+  text-align: center;
+  padding: 40px;
+}
+
+/* 赛博朋克旋转器 */
+.cyber-spinner {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 30px;
+}
+
+.spinner-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  animation: spin 1.5s linear infinite;
+}
+
+.ring-1 {
+  width: 100%;
+  height: 100%;
+  border-top-color: var(--neon-cyan);
+  border-right-color: var(--neon-cyan);
+  box-shadow: 0 0 20px rgba(0, 245, 255, 0.5);
+  animation-duration: 2s;
+}
+
+.ring-2 {
+  width: 75%;
+  height: 75%;
+  top: 12.5%;
+  left: 12.5%;
+  border-bottom-color: var(--neon-purple);
+  border-left-color: var(--neon-purple);
+  box-shadow: 0 0 15px rgba(185, 38, 255, 0.5);
+  animation-duration: 1.5s;
+  animation-direction: reverse;
+}
+
+.ring-3 {
+  width: 50%;
+  height: 50%;
+  top: 25%;
+  left: 25%;
+  border-top-color: var(--neon-pink);
+  border-bottom-color: var(--neon-pink);
+  box-shadow: 0 0 10px rgba(255, 0, 110, 0.5);
+  animation-duration: 1s;
+}
+
+.spinner-core {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 20px;
+  height: 20px;
+  background: var(--neon-cyan);
+  border-radius: 50%;
+  box-shadow: 0 0 30px var(--neon-cyan), 0 0 60px var(--neon-cyan);
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { 
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  50% { 
+    transform: translate(-50%, -50%) scale(1.2);
+    opacity: 0.8;
+  }
+}
+
+/* 加载文字 */
+.loading-text {
+  margin-bottom: 25px;
+}
+
+.loading-title {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--neon-cyan);
+  text-shadow: 0 0 10px rgba(0, 245, 255, 0.8);
+  letter-spacing: 3px;
+  animation: glow 2s ease-in-out infinite;
+}
+
+.loading-subtitle {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  letter-spacing: 2px;
+  margin-top: 8px;
+  text-transform: uppercase;
+}
+
+@keyframes glow {
+  0%, 100% { text-shadow: 0 0 10px rgba(0, 245, 255, 0.8); }
+  50% { text-shadow: 0 0 20px rgba(0, 245, 255, 1), 0 0 30px rgba(0, 245, 255, 0.5); }
+}
+
+/* 加载进度条 */
+.loading-progress {
+  width: 300px;
+  max-width: 100%;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 4px;
+  background: var(--bg-secondary);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--neon-cyan), var(--neon-purple), var(--neon-pink));
+  border-radius: 2px;
+  transition: width 0.3s ease;
+  box-shadow: 0 0 10px var(--neon-cyan);
+  position: relative;
+}
+
+.progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 20px;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.8));
+  animation: shimmer 1s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { opacity: 0; }
+  50% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.progress-text {
+  display: block;
+  margin-top: 10px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* 亮色模式调整 */
+[data-theme="light"] .loading-overlay {
+  background: radial-gradient(ellipse at center, #ffffff 0%, #f0f2f5 100%);
+}
+
+[data-theme="light"] .loading-title {
+  color: var(--neon-blue);
+  text-shadow: none;
+}
+
+[data-theme="light"] .progress-fill {
+  box-shadow: 0 0 5px var(--neon-blue);
+}
+
+/* ===== 网格背景 ===== */
 body::before {
   content: '';
   position: fixed;

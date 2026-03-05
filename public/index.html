@@ -11,6 +11,28 @@
   <!-- 粒子背景画布 -->
   <canvas id="particleCanvas"></canvas>
   
+  <!-- 全屏加载动画 -->
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="loading-content">
+      <div class="cyber-spinner">
+        <div class="spinner-ring ring-1"></div>
+        <div class="spinner-ring ring-2"></div>
+        <div class="spinner-ring ring-3"></div>
+        <div class="spinner-core"></div>
+      </div>
+      <div class="loading-text">
+        <span class="loading-title">SYSTEM INITIALIZING</span>
+        <span class="loading-subtitle">J.A.R.V.I.S. NODE MONITOR</span>
+      </div>
+      <div class="loading-progress">
+        <div class="progress-bar">
+          <div class="progress-fill" id="loadingProgress"></div>
+        </div>
+        <span class="progress-text" id="loadingStatus">LOADING...</span>
+      </div>
+    </div>
+  </div>
+  
   <div class="container">
     <!-- 头部 -->
     <header class="header">
@@ -184,7 +206,7 @@
         <a href="https://github.com/Magic-KK/node-monitor" target="_blank">GITHUB</a>
       </p>
       <p style="margin-top: 10px; font-size: 0.75rem; color: var(--text-muted);">
-        SYSTEM VERSION 1.10.0 // ALERT NOTIFICATIONS
+        SYSTEM VERSION 1.11.0 // LOADING ANIMATION
       </p>
     </footer>
   </div>

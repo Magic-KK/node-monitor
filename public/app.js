@@ -75,6 +75,11 @@ let connectionCtx = null;
 // 当前选中的节点
 let selectedNode = null;
 
+// 加载动画元素
+let loadingOverlay = null;
+let loadingProgress = null;
+let loadingStatus = null;
+
 // 音效系统
 const soundToggle = document.getElementById('soundToggle');
 let soundEnabled = true;
@@ -99,6 +104,9 @@ async function init() {
   console.log('🚀 SYSTEM INITIALIZING...');
   console.log('🤖 J.A.R.V.I.S. NODE MONITOR - CYBERPUNK EDITION');
   
+  // 初始化加载动画
+  initLoadingAnimation();
+  
   // 初始化粒子背景
   initParticles();
   
@@ -115,21 +123,80 @@ async function init() {
   initSound();
   
   // 加载配置
+  updateLoadingProgress(20, 'LOADING CONFIGURATION...');
   await loadConfig();
   
   // 初始状态获取
+  updateLoadingProgress(40, 'FETCHING NODE STATUS...');
   await fetchStatus();
   
   // 获取系统指标
+  updateLoadingProgress(70, 'LOADING SYSTEM METRICS...');
   await fetchSystemMetrics();
   
   // 绑定事件
+  updateLoadingProgress(90, 'INITIALIZING CONTROLS...');
   bindEvents();
   
   // 启动自动刷新
   startAutoRefresh();
   
+  // 隐藏加载动画
+  updateLoadingProgress(100, 'SYSTEM ONLINE');
+  setTimeout(() => hideLoadingOverlay(), 500);
+  
   console.log('✅ SYSTEM ONLINE');
+}
+
+/**
+ * 初始化加载动画
+ */
+function initLoadingAnimation() {
+  loadingOverlay = document.getElementById('loadingOverlay');
+  loadingProgress = document.getElementById('loadingProgress');
+  loadingStatus = document.getElementById('loadingStatus');
+  console.log('🎬 LOADING ANIMATION INITIALIZED');
+}
+
+/**
+ * 更新加载进度
+ * @param {number} percent - 进度百分比 (0-100)
+ * @param {string} status - 状态文本
+ */
+function updateLoadingProgress(percent, status) {
+  if (loadingProgress) {
+    loadingProgress.style.width = percent + '%';
+  }
+  if (loadingStatus) {
+    loadingStatus.textContent = status;
+  }
+  console.log(`📊 LOADING: ${percent}% - ${status}`);
+}
+
+/**
+ * 隐藏加载动画
+ */
+function hideLoadingOverlay() {
+  if (loadingOverlay) {
+    loadingOverlay.classList.add('hidden');
+    // 3 秒后完全移除 DOM 元素
+    setTimeout(() => {
+      if (loadingOverlay) {
+        loadingOverlay.style.display = 'none';
+      }
+    }, 500);
+  }
+}
+
+/**
+ * 显示加载动画（用于刷新操作）
+ */
+function showLoadingOverlay() {
+  if (loadingOverlay) {
+    loadingOverlay.classList.remove('hidden');
+    loadingOverlay.style.display = 'flex';
+    updateLoadingProgress(0, 'REFRESHING...');
+  }
 }
 
 /**

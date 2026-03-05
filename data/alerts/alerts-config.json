@@ -1,0 +1,17 @@
+{
+  "enabled": false,
+  "feishuWebhook": "",
+  "emailEnabled": false,
+  "emailConfig": {
+    "smtpHost": "",
+    "smtpPort": 587,
+    "username": "",
+    "password": "",
+    "from": "",
+    "to": []
+  },
+  "notifyOnOffline": true,
+  "notifyOnOnline": false,
+  "notifyOnConfigChange": false,
+  "cooldownMinutes": 5
+}
