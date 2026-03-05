@@ -165,6 +165,16 @@
         </label>
         <span class="toggle-label">自动刷新</span>
       </div>
+      <div class="refresh-interval">
+        <span class="interval-label">🕐 刷新间隔:</span>
+        <select id="refreshInterval" class="interval-select">
+          <option value="10000">10 秒</option>
+          <option value="30000" selected>30 秒</option>
+          <option value="60000">1 分钟</option>
+          <option value="300000">5 分钟</option>
+          <option value="600000">10 分钟</option>
+        </select>
+      </div>
       <div class="theme-toggle">
         <span class="theme-toggle-label">THEME:</span>
         <button id="themeToggle" class="theme-btn" title="切换主题">
@@ -221,7 +231,7 @@
         <a href="https://github.com/Magic-KK/node-monitor" target="_blank">GITHUB</a>
       </p>
       <p style="margin-top: 10px; font-size: 0.75rem; color: var(--text-muted);">
-        SYSTEM VERSION 1.14.0 // WEBSOCKET REAL-TIME PUSH
+        SYSTEM VERSION 1.15.0 // REFRESH INTERVAL SETTINGS
       </p>
     </footer>
   </div>

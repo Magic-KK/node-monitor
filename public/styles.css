@@ -839,6 +839,65 @@ body::after {
   margin-left: auto;
 }
 
+/* 刷新间隔选择器 */
+.refresh-interval {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 15px;
+  padding-left: 15px;
+  border-left: 1px solid rgba(0, 245, 255, 0.3);
+}
+
+.interval-label {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+
+.interval-select {
+  background: rgba(0, 245, 255, 0.1);
+  border: 1px solid var(--neon-cyan);
+  border-radius: 4px;
+  color: var(--neon-cyan);
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  font-family: 'Courier New', monospace;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: var(--transition);
+  outline: none;
+  min-width: 90px;
+}
+
+.interval-select:hover {
+  background: rgba(0, 245, 255, 0.2);
+  box-shadow: 0 0 15px rgba(0, 245, 255, 0.3);
+}
+
+.interval-select:focus {
+  background: rgba(0, 245, 255, 0.25);
+  box-shadow: 0 0 25px rgba(0, 245, 255, 0.5);
+  border-color: var(--neon-cyan);
+}
+
+/* 亮色模式下的刷新间隔选择器 */
+[data-theme="light"] .refresh-interval {
+  border-left-color: rgba(0, 139, 163, 0.4);
+}
+
+[data-theme="light"] .interval-select {
+  background: rgba(0, 139, 163, 0.1);
+  border-color: var(--neon-cyan);
+  color: var(--neon-cyan);
+}
+
+[data-theme="light"] .interval-select:hover {
+  background: rgba(0, 139, 163, 0.2);
+}
+
 .toggle-label {
   color: var(--text-secondary);
   font-size: 0.875rem;
@@ -1404,6 +1463,14 @@ body::after {
   .auto-refresh {
     margin-left: 0;
     justify-content: center;
+  }
+  
+  .refresh-interval {
+    margin-left: 0;
+    padding-left: 0;
+    border-left: none;
+    justify-content: center;
+    margin-top: 10px;
   }
   
   .last-update {

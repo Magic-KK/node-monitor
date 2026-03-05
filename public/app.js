@@ -42,6 +42,7 @@ const nodesGrid = document.getElementById('nodesGrid');
 const refreshBtn = document.getElementById('refreshBtn');
 const healthCheckBtn = document.getElementById('healthCheckBtn');
 const autoRefreshToggle = document.getElementById('autoRefresh');
+const refreshIntervalSelect = document.getElementById('refreshInterval');
 const themeToggle = document.getElementById('themeToggle');
 const themeIcon = document.getElementById('themeIcon');
 const lastUpdateEl = document.getElementById('lastUpdate');
@@ -1062,13 +1063,15 @@ function startAutoRefresh() {
     clearInterval(autoRefreshInterval);
   }
   
-  // 每 30 秒自动刷新状态
+  // 获取用户配置的刷新间隔（默认 30 秒）
+  const refreshInterval = parseInt(refreshIntervalSelect?.value || '30000');
+  
   autoRefreshInterval = setInterval(() => {
     if (autoRefreshToggle.checked && !isRefreshing) {
       fetchStatus();
       fetchSystemMetrics();
     }
-  }, 30000);
+  }, refreshInterval);
 }
 
 /**
@@ -1097,10 +1100,39 @@ function bindEvents() {
   autoRefreshToggle.addEventListener('change', () => {
     if (autoRefreshToggle.checked) {
       showNotification('AUTO-REFRESH ENABLED');
+      startAutoRefresh();
     } else {
       showNotification('AUTO-REFRESH DISABLED');
+      if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+      }
     }
   });
+  
+  // 刷新间隔选择器
+  if (refreshIntervalSelect) {
+    // 从 localStorage 加载保存的刷新间隔
+    const savedInterval = localStorage.getItem('refreshInterval');
+    if (savedInterval) {
+      refreshIntervalSelect.value = savedInterval;
+    }
+    
+    refreshIntervalSelect.addEventListener('change', () => {
+      const interval = refreshIntervalSelect.value;
+      // 保存到 localStorage
+      localStorage.setItem('refreshInterval', interval);
+      
+      // 格式化显示
+      const intervalText = formatIntervalText(interval);
+      showNotification(`REFRESH INTERVAL: ${intervalText}`);
+      
+      // 重新启动自动刷新（如果已启用）
+      if (autoRefreshToggle.checked) {
+        startAutoRefresh();
+      }
+    });
+  }
   
   // 主题切换按钮
   themeToggle.addEventListener('click', toggleTheme);
@@ -1412,6 +1444,24 @@ function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+/**
+ * 格式化刷新间隔文本
+ * @param {string} ms - 毫秒数
+ * @returns {string} 格式化后的文本
+ */
+function formatIntervalText(ms) {
+  const seconds = parseInt(ms) / 1000;
+  if (seconds < 60) {
+    return `${seconds}秒`;
+  } else if (seconds < 3600) {
+    const minutes = seconds / 60;
+    return `${minutes}分钟`;
+  } else {
+    const hours = seconds / 3600;
+    return `${hours}小时`;
+  }
 }
 
 /**
