@@ -51,7 +51,7 @@ async function loadConfig() {
     
     if (result.success) {
       config = result.data;
-      console.log('📋 配置加载成功:', config.teamName);
+      console.log('📋 配置加载成功:', config.teamName, `(源：${config.source})`);
       document.title = `${config.teamName} - 节点监控`;
     }
   } catch (err) {
@@ -109,7 +109,7 @@ async function runHealthCheck() {
       updateLastUpdateTime(result.data.checkTime);
       
       // 显示成功提示
-      showNotification(`健康检查完成：${result.data.onlineCount}/${result.data.totalNodes} 节点在线`);
+      showNotification(`健康检查完成：${result.data.onlineCount}/${result.data.configuredCount} 节点在线`);
     } else {
       showError('健康检查失败：' + result.error);
     }
@@ -128,19 +128,13 @@ async function runHealthCheck() {
  * @param {Array} nodes - 节点状态数组
  */
 function renderNodes(nodes) {
-  if (!config || !config.members) {
+  if (!config || !config.nodes) {
     nodesGrid.innerHTML = '<div class="error-message">配置未加载</div>';
     return;
   }
   
-  // 合并配置和状态
-  const nodesWithStatus = config.members.map(member => {
-    const status = nodes.find(n => n.id === member.id) || {};
-    return { ...member, ...status };
-  });
-  
   // 生成 HTML
-  nodesGrid.innerHTML = nodesWithStatus.map(node => createNodeCard(node)).join('');
+  nodesGrid.innerHTML = nodes.map(node => createNodeCard(node)).join('');
 }
 
 /**
@@ -149,9 +143,27 @@ function renderNodes(nodes) {
  * @returns {string} HTML 字符串
  */
 function createNodeCard(node) {
-  const statusClass = node.online ? 'online' : 'offline';
-  const statusText = node.online ? '在线' : '离线';
-  const statusBadgeClass = node.online ? 'status-online' : 'status-offline';
+  // 确定状态类别
+  let statusClass = 'offline';
+  let statusText = '离线';
+  let statusBadgeClass = 'status-offline';
+  
+  if (!node.configured) {
+    // 未配置
+    statusClass = 'unconfigured';
+    statusText = '未配置';
+    statusBadgeClass = 'status-unconfigured';
+  } else if (node.online) {
+    // 已配置且在线
+    statusClass = 'online';
+    statusText = '在线';
+    statusBadgeClass = 'status-online';
+  } else if (node.configured) {
+    // 已配置但离线
+    statusClass = 'offline';
+    statusText = '离线';
+    statusBadgeClass = 'status-offline';
+  }
   
   return `
     <div class="node-card ${statusClass}">
@@ -171,14 +183,24 @@ function createNodeCard(node) {
         ${node.description || '暂无描述'}
       </div>
       
+      ${!node.configured ? `
+      <div class="node-details">
+        <div class="detail-row" style="color: var(--warning)">
+          <span class="detail-label">⚠️ 状态</span>
+          <span class="detail-value">未配置（appId 无效）</span>
+        </div>
+        ${node.workspace ? `
+        <div class="detail-row">
+          <span class="detail-label">工作空间</span>
+          <span class="detail-value">${node.workspace}</span>
+        </div>
+        ` : ''}
+      </div>
+      ` : `
       <div class="node-details">
         <div class="detail-row">
-          <span class="detail-label">主机</span>
-          <span class="detail-value">${node.host || '-'}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">端口</span>
-          <span class="detail-value">${node.port || '-'}</span>
+          <span class="detail-label">工作空间</span>
+          <span class="detail-value">${node.workspace || '-'}</span>
         </div>
         ${node.responseTime ? `
         <div class="detail-row">
@@ -197,6 +219,7 @@ function createNodeCard(node) {
         </div>
         ` : ''}
       </div>
+      `}
     </div>
   `;
 }
@@ -208,11 +231,11 @@ function createNodeCard(node) {
 function updateStats(data) {
   totalNodesEl.textContent = data.totalNodes || 0;
   onlineNodesEl.textContent = data.onlineCount || 0;
-  offlineNodesEl.textContent = (data.totalNodes || 0) - (data.onlineCount || 0);
+  offlineNodesEl.textContent = (data.configuredCount || 0) - (data.onlineCount || 0);
   
   // 更新颜色
   onlineNodesEl.style.color = 'var(--success)';
-  offlineNodesEl.style.color = data.onlineCount === data.totalNodes ? 'var(--text-muted)' : 'var(--danger)';
+  offlineNodesEl.style.color = data.onlineCount === data.configuredCount ? 'var(--text-muted)' : 'var(--danger)';
 }
 
 /**

@@ -1,16 +1,16 @@
 {
   "teamName": "J.A.R.V.I.S. 专才团队",
   "workspace": "workspace-team-a",
+  "configSource": "openclaw.json",
+  "note": "实际节点列表从 openclaw.json 动态读取，此配置仅作为备用",
   "members": [
     {
-      "id": "main-brain",
+      "id": "main-bot",
       "name": "J.A.R.V.I.S.",
       "role": "主脑",
       "emoji": "🧠",
       "description": "团队协调与任务分发",
-      "host": "niuniu的Mac mini",
-      "port": 3000,
-      "healthEndpoint": "/status"
+      "workspace": "/Users/niuniu/.openclaw/workspace-main"
     },
     {
       "id": "coder-bot",
@@ -18,9 +18,7 @@
       "role": "代码专家",
       "emoji": "🐮💻",
       "description": "编程、代码审查、技术架构",
-      "host": "niuniu的Mac mini",
-      "port": 3001,
-      "healthEndpoint": "/status"
+      "workspace": "/Users/niuniu/.openclaw/workspace-team-a"
     },
     {
       "id": "researcher-bot",
@@ -28,9 +26,8 @@
       "role": "调研专家",
       "emoji": "🔬",
       "description": "信息搜集、数据分析、调研报告",
-      "host": "niuniu的Mac mini",
-      "port": 3002,
-      "healthEndpoint": "/status"
+      "workspace": "/Users/niuniu/.openclaw/workspace-team-a",
+      "note": "需要配置飞书 appId 才能启用"
     },
     {
       "id": "writer-bot",
@@ -38,9 +35,8 @@
       "role": "文案专家",
       "emoji": "✒️",
       "description": "文案写作、内容编辑、创意输出",
-      "host": "niuniu的Mac mini",
-      "port": 3003,
-      "healthEndpoint": "/status"
+      "workspace": "/Users/niuniu/.openclaw/workspace-team-a",
+      "note": "需要配置飞书 appId 才能启用"
     }
   ],
   "checkInterval": 30000,

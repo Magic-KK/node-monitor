@@ -272,6 +272,11 @@ body {
   background: var(--warning);
 }
 
+.node-card.unconfigured::before {
+  background: var(--warning);
+  opacity: 0.5;
+}
+
 .node-header {
   display: flex;
   align-items: center;
@@ -331,6 +336,12 @@ body {
 .status-warning {
   background: rgba(255, 170, 0, 0.2);
   color: var(--warning);
+}
+
+.status-unconfigured {
+  background: rgba(255, 170, 0, 0.15);
+  color: var(--warning);
+  opacity: 0.8;
 }
 
 .status-dot {
