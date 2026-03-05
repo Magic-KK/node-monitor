@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>J.A.R.V.I.S. 节点监控</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <!-- 头部 -->
+    <header class="header">
+      <div class="header-content">
+        <h1>
+          <span class="logo">🤖</span>
+          J.A.R.V.I.S. 节点监控
+        </h1>
+        <p class="subtitle">团队节点状态实时监控面板</p>
+      </div>
+      
+      <div class="header-stats">
+        <div class="stat-card">
+          <span class="stat-value" id="totalNodes">-</span>
+          <span class="stat-label">总节点</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="onlineNodes">-</span>
+          <span class="stat-label">在线</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="offlineNodes">-</span>
+          <span class="stat-label">离线</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- 控制栏 -->
+    <div class="controls">
+      <button id="refreshBtn" class="btn btn-primary">
+        <span class="btn-icon">🔄</span>
+        刷新状态
+      </button>
+      <button id="healthCheckBtn" class="btn btn-success">
+        <span class="btn-icon">🔍</span>
+        健康检查
+      </button>
+      <div class="auto-refresh">
+        <label class="toggle">
+          <input type="checkbox" id="autoRefresh" checked>
+          <span class="toggle-slider"></span>
+        </label>
+        <span class="toggle-label">自动刷新</span>
+      </div>
+      <div class="last-update">
+        最后更新：<span id="lastUpdate">-</span>
+      </div>
+    </div>
+
+    <!-- 节点列表 -->
+    <div class="nodes-grid" id="nodesGrid">
+      <!-- 节点卡片将通过 JS 动态生成 -->
+      <div class="loading">
+        <div class="spinner"></div>
+        <p>加载中...</p>
+      </div>
+    </div>
+
+    <!-- 页脚 -->
+    <footer class="footer">
+      <p>
+        Made with ❤️ by 牛开发 🐮💻 | 
+        <a href="/api/status" target="_blank">API 文档</a>
+      </p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

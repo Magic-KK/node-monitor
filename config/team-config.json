@@ -1,0 +1,48 @@
+{
+  "teamName": "J.A.R.V.I.S. 专才团队",
+  "workspace": "workspace-team-a",
+  "members": [
+    {
+      "id": "main-brain",
+      "name": "J.A.R.V.I.S.",
+      "role": "主脑",
+      "emoji": "🧠",
+      "description": "团队协调与任务分发",
+      "host": "niuniu的Mac mini",
+      "port": 3000,
+      "healthEndpoint": "/status"
+    },
+    {
+      "id": "coder-bot",
+      "name": "牛开发",
+      "role": "代码专家",
+      "emoji": "🐮💻",
+      "description": "编程、代码审查、技术架构",
+      "host": "niuniu的Mac mini",
+      "port": 3001,
+      "healthEndpoint": "/status"
+    },
+    {
+      "id": "researcher-bot",
+      "name": "researcher-bot",
+      "role": "调研专家",
+      "emoji": "🔬",
+      "description": "信息搜集、数据分析、调研报告",
+      "host": "niuniu的Mac mini",
+      "port": 3002,
+      "healthEndpoint": "/status"
+    },
+    {
+      "id": "writer-bot",
+      "name": "writer-bot",
+      "role": "文案专家",
+      "emoji": "✒️",
+      "description": "文案写作、内容编辑、创意输出",
+      "host": "niuniu的Mac mini",
+      "port": 3003,
+      "healthEndpoint": "/status"
+    }
+  ],
+  "checkInterval": 30000,
+  "timeout": 5000
+}
