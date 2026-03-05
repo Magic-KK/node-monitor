@@ -1578,3 +1578,291 @@ body::after {
 [data-theme="light"] .legend-item:hover {
   background: rgba(0, 139, 163, 0.1);
 }
+
+/* ===== 配置管理弹窗样式 ===== */
+
+.modal-content-large {
+  max-width: 900px;
+  width: 95%;
+}
+
+.settings-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  border-bottom: 2px solid var(--border-color);
+  padding-bottom: 10px;
+}
+
+.tab-btn {
+  padding: 10px 20px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: var(--border-radius) var(--border-radius) 0 0;
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tab-btn:hover {
+  background: rgba(0, 245, 255, 0.1);
+  color: var(--neon-cyan);
+}
+
+.tab-btn.active {
+  background: rgba(0, 245, 255, 0.15);
+  color: var(--neon-cyan);
+  border-bottom: 2px solid var(--neon-cyan);
+  margin-bottom: -12px;
+}
+
+.tab-content {
+  display: none;
+  animation: fadeIn 0.3s ease;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.form-input {
+  width: 100%;
+  padding: 12px 15px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid var(--border-color);
+  border-radius: var(--border-radius);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  transition: var(--transition);
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 10px rgba(0, 245, 255, 0.3);
+}
+
+.form-input::placeholder {
+  color: var(--text-muted);
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.form-hint {
+  display: block;
+  margin-top: 5px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.config-source-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  background: rgba(0, 245, 255, 0.05);
+  border-radius: var(--border-radius);
+}
+
+.config-source-info small {
+  color: var(--text-secondary);
+}
+
+/* 节点表格 */
+.nodes-table-container {
+  overflow-x: auto;
+}
+
+.nodes-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+
+.nodes-table thead {
+  background: rgba(0, 245, 255, 0.1);
+}
+
+.nodes-table th {
+  padding: 15px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--neon-cyan);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.nodes-table td {
+  padding: 12px 15px;
+  border-top: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.nodes-table tbody tr:hover {
+  background: rgba(0, 245, 255, 0.05);
+}
+
+.nodes-table code {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  color: var(--neon-cyan);
+}
+
+.nodes-table .no-data {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 30px;
+}
+
+/* 小按钮 */
+.btn-small {
+  padding: 5px 10px;
+  font-size: 0.85rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: var(--transition);
+  margin-right: 5px;
+}
+
+.btn-edit {
+  background: rgba(0, 245, 255, 0.2);
+  color: var(--neon-cyan);
+}
+
+.btn-edit:hover {
+  background: rgba(0, 245, 255, 0.3);
+}
+
+.btn-delete {
+  background: rgba(255, 71, 87, 0.2);
+  color: var(--neon-red);
+}
+
+.btn-delete:hover {
+  background: rgba(255, 71, 87, 0.3);
+}
+
+/* 消息提示框 */
+.message-box {
+  padding: 15px 20px;
+  border-radius: var(--border-radius);
+  margin-bottom: 20px;
+  font-weight: 500;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.message-success {
+  background: rgba(0, 255, 136, 0.15);
+  border: 2px solid var(--neon-green);
+  color: var(--neon-green);
+}
+
+.message-error {
+  background: rgba(255, 71, 87, 0.15);
+  border: 2px solid var(--neon-red);
+  color: var(--neon-red);
+}
+
+.message-info {
+  background: rgba(0, 245, 255, 0.15);
+  border: 2px solid var(--neon-cyan);
+  color: var(--neon-cyan);
+}
+
+/* 按钮变体 */
+.btn-info {
+  background: rgba(0, 245, 255, 0.15);
+  color: var(--neon-cyan);
+  border: 2px solid var(--neon-cyan);
+}
+
+.btn-info:hover {
+  background: rgba(0, 245, 255, 0.25);
+  box-shadow: 0 0 20px rgba(0, 245, 255, 0.4);
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  border: 2px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: var(--text-secondary);
+}
+
+/* 亮色模式调整 */
+[data-theme="light"] .modal-content-large {
+  background: rgba(255, 255, 255, 0.98);
+}
+
+[data-theme="light"] .form-input {
+  background: rgba(255, 255, 255, 0.8);
+  border-color: rgba(0, 139, 163, 0.3);
+}
+
+[data-theme="light"] .form-input:focus {
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 10px rgba(0, 139, 163, 0.2);
+}
+
+[data-theme="light"] .nodes-table {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+[data-theme="light"] .nodes-table thead {
+  background: rgba(0, 139, 163, 0.1);
+}
+
+[data-theme="light"] .nodes-table tbody tr:hover {
+  background: rgba(0, 139, 163, 0.05);
+}
+
+[data-theme="light"] .config-source-info {
+  background: rgba(0, 139, 163, 0.05);
+}

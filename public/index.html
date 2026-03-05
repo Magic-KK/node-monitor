@@ -108,6 +108,10 @@
         <span class="btn-icon">🔍</span>
         健康检查
       </button>
+      <button id="settingsBtn" class="btn btn-info">
+        <span class="btn-icon">⚙️</span>
+        配置管理
+      </button>
       <div class="auto-refresh">
         <label class="toggle">
           <input type="checkbox" id="autoRefresh" checked>
@@ -168,7 +172,7 @@
         <a href="https://github.com/Magic-KK/node-monitor" target="_blank">GITHUB</a>
       </p>
       <p style="margin-top: 10px; font-size: 0.75rem; color: var(--text-muted);">
-        SYSTEM VERSION 1.6.0 // SOUND EFFECTS
+        SYSTEM VERSION 1.7.0 // CONFIG MANAGEMENT UI
       </p>
     </footer>
   </div>
@@ -191,6 +195,131 @@
         <button id="copyInfoBtn" class="btn btn-success">
           <span class="btn-icon">📋</span>
           COPY INFO
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 配置管理弹窗 -->
+  <div id="settingsModal" class="modal">
+    <div class="modal-content modal-content-large">
+      <div class="modal-header">
+        <h2>⚙️ CONFIGURATION MANAGEMENT</h2>
+        <button id="closeSettingsModal" class="modal-close" title="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <!-- 标签页导航 -->
+        <div class="settings-tabs">
+          <button class="tab-btn active" data-tab="general">📋 基础设置</button>
+          <button class="tab-btn" data-tab="nodes">👥 节点管理</button>
+          <button class="tab-btn" data-tab="add-node">➕ 添加节点</button>
+        </div>
+
+        <!-- 基础设置标签页 -->
+        <div class="tab-content active" id="tab-general">
+          <div class="form-group">
+            <label for="teamNameInput">团队名称</label>
+            <input type="text" id="teamNameInput" class="form-input" placeholder="J.A.R.V.I.S. 专才团队">
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="checkIntervalInput">检查间隔 (毫秒)</label>
+              <input type="number" id="checkIntervalInput" class="form-input" min="5000" max="300000" step="1000">
+              <small class="form-hint">范围：5000 - 300000ms (5 秒 - 5 分钟)</small>
+            </div>
+            
+            <div class="form-group">
+              <label for="timeoutInput">超时时间 (毫秒)</label>
+              <input type="number" id="timeoutInput" class="form-input" min="1000" max="30000" step="500">
+              <small class="form-hint">范围：1000 - 30000ms (1 秒 - 30 秒)</small>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="workspaceInput">工作空间</label>
+            <input type="text" id="workspaceInput" class="form-input" placeholder="workspace-team-a">
+          </div>
+          
+          <div class="form-group">
+            <label>配置来源</label>
+            <div class="config-source-info">
+              <span class="badge badge-info">openclaw.json</span>
+              <small>节点列表从 OpenClaw 配置动态读取</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- 节点管理标签页 -->
+        <div class="tab-content" id="tab-nodes">
+          <div class="nodes-table-container">
+            <table class="nodes-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>名称</th>
+                  <th>角色</th>
+                  <th>工作空间</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="nodesTableBody">
+                <!-- 节点列表动态生成 -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 添加节点标签页 -->
+        <div class="tab-content" id="tab-add-node">
+          <div class="form-group">
+            <label for="newNodeId">节点 ID *</label>
+            <input type="text" id="newNodeId" class="form-input" placeholder="例如：new-bot">
+          </div>
+          
+          <div class="form-group">
+            <label for="newNodeName">节点名称 *</label>
+            <input type="text" id="newNodeName" class="form-input" placeholder="例如：新助手">
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="newNodeRole">角色</label>
+              <input type="text" id="newNodeRole" class="form-input" placeholder="例如：AI 助手">
+            </div>
+            
+            <div class="form-group">
+              <label for="newNodeEmoji">Emoji</label>
+              <input type="text" id="newNodeEmoji" class="form-input" placeholder="例如：🤖" value="🤖">
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="newNodeDescription">描述</label>
+            <textarea id="newNodeDescription" class="form-input form-textarea" rows="3" placeholder="节点功能描述..."></textarea>
+          </div>
+          
+          <div class="form-group">
+            <label for="newNodeWorkspace">工作空间</label>
+            <input type="text" id="newNodeWorkspace" class="form-input" placeholder="workspace-team-a">
+          </div>
+        </div>
+
+        <!-- 消息提示区域 -->
+        <div id="settingsMessage" class="message-box" style="display: none;"></div>
+      </div>
+      <div class="modal-footer">
+        <button id="saveSettingsBtn" class="btn btn-success">
+          <span class="btn-icon">💾</span>
+          保存设置
+        </button>
+        <button id="addNodeBtn" class="btn btn-primary" style="display: none;">
+          <span class="btn-icon">➕</span>
+          添加节点
+        </button>
+        <button id="cancelSettingsBtn" class="btn btn-secondary">
+          <span class="btn-icon">✕</span>
+          取消
         </button>
       </div>
     </div>

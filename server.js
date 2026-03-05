@@ -475,6 +475,211 @@ app.get('/api/system-metrics', (req, res) => {
 });
 
 /**
+ * API: 获取配置设置
+ * GET /api/settings
+ */
+app.get('/api/settings', (req, res) => {
+  try {
+    const settings = {
+      teamName: teamConfig.teamName || 'J.A.R.V.I.S. 专才团队',
+      checkInterval: teamConfig.checkInterval || 30000,
+      timeout: teamConfig.timeout || 5000,
+      workspace: teamConfig.workspace || 'workspace-team-a',
+      configSource: teamConfig.configSource || 'openclaw.json',
+      members: teamConfig.members || []
+    };
+    
+    res.json({
+      success: true,
+      data: settings
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+/**
+ * API: 更新配置设置
+ * POST /api/settings
+ */
+app.post('/api/settings', (req, res) => {
+  try {
+    const newSettings = req.body;
+    
+    // 验证并更新配置
+    if (newSettings.teamName !== undefined) {
+      teamConfig.teamName = newSettings.teamName;
+    }
+    if (newSettings.checkInterval !== undefined) {
+      // 限制在 5 秒到 5 分钟之间
+      teamConfig.checkInterval = Math.max(5000, Math.min(300000, parseInt(newSettings.checkInterval)));
+    }
+    if (newSettings.timeout !== undefined) {
+      // 限制在 1 秒到 30 秒之间
+      teamConfig.timeout = Math.max(1000, Math.min(30000, parseInt(newSettings.timeout)));
+    }
+    if (newSettings.workspace !== undefined) {
+      teamConfig.workspace = newSettings.workspace;
+    }
+    
+    // 保存配置到文件
+    fs.writeFileSync(configPath, JSON.stringify(teamConfig, null, 2), 'utf8');
+    
+    // 如果检查间隔改变，需要重启调度器（这里简单处理，实际生产环境需要更复杂的逻辑）
+    if (newSettings.checkInterval !== undefined) {
+      console.log(`⏰ 检查间隔已更新：${teamConfig.checkInterval / 1000}秒`);
+    }
+    
+    res.json({
+      success: true,
+      message: '配置已保存',
+      data: {
+        teamName: teamConfig.teamName,
+        checkInterval: teamConfig.checkInterval,
+        timeout: teamConfig.timeout,
+        workspace: teamConfig.workspace
+      }
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      error: '保存配置失败：' + err.message
+    });
+  }
+});
+
+/**
+ * API: 添加新节点
+ * POST /api/nodes
+ */
+app.post('/api/nodes', (req, res) => {
+  try {
+    const newNode = req.body;
+    
+    // 验证必填字段
+    if (!newNode.id || !newNode.name) {
+      return res.status(400).json({
+        success: false,
+        error: '缺少必填字段：id 和 name'
+      });
+    }
+    
+    // 检查是否已存在
+    const exists = teamConfig.members.some(m => m.id === newNode.id);
+    if (exists) {
+      return res.status(400).json({
+        success: false,
+        error: '节点 ID 已存在'
+      });
+    }
+    
+    // 添加新节点
+    teamConfig.members.push({
+      id: newNode.id,
+      name: newNode.name,
+      role: newNode.role || 'Agent',
+      emoji: newNode.emoji || '🤖',
+      description: newNode.description || '',
+      workspace: newNode.workspace || teamConfig.workspace
+    });
+    
+    // 保存配置
+    fs.writeFileSync(configPath, JSON.stringify(teamConfig, null, 2), 'utf8');
+    
+    res.json({
+      success: true,
+      message: '节点已添加',
+      data: teamConfig.members[teamConfig.members.length - 1]
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      error: '添加节点失败：' + err.message
+    });
+  }
+});
+
+/**
+ * API: 更新节点
+ * PUT /api/nodes/:id
+ */
+app.put('/api/nodes/:id', (req, res) => {
+  try {
+    const nodeId = req.params.id;
+    const updates = req.body;
+    
+    // 查找节点
+    const nodeIndex = teamConfig.members.findIndex(m => m.id === nodeId);
+    if (nodeIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        error: '节点未找到'
+      });
+    }
+    
+    // 更新节点信息
+    const node = teamConfig.members[nodeIndex];
+    if (updates.name !== undefined) node.name = updates.name;
+    if (updates.role !== undefined) node.role = updates.role;
+    if (updates.emoji !== undefined) node.emoji = updates.emoji;
+    if (updates.description !== undefined) node.description = updates.description;
+    if (updates.workspace !== undefined) node.workspace = updates.workspace;
+    
+    // 保存配置
+    fs.writeFileSync(configPath, JSON.stringify(teamConfig, null, 2), 'utf8');
+    
+    res.json({
+      success: true,
+      message: '节点已更新',
+      data: node
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      error: '更新节点失败：' + err.message
+    });
+  }
+});
+
+/**
+ * API: 删除节点
+ * DELETE /api/nodes/:id
+ */
+app.delete('/api/nodes/:id', (req, res) => {
+  try {
+    const nodeId = req.params.id;
+    
+    // 查找节点
+    const nodeIndex = teamConfig.members.findIndex(m => m.id === nodeId);
+    if (nodeIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        error: '节点未找到'
+      });
+    }
+    
+    // 删除节点
+    teamConfig.members.splice(nodeIndex, 1);
+    
+    // 保存配置
+    fs.writeFileSync(configPath, JSON.stringify(teamConfig, null, 2), 'utf8');
+    
+    res.json({
+      success: true,
+      message: '节点已删除'
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      error: '删除节点失败：' + err.message
+    });
+  }
+});
+
+/**
  * 格式化字节数为人类可读格式
  * @param {number} bytes - 字节数
  * @returns {string} 格式化后的字符串

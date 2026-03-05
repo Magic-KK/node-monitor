@@ -816,6 +816,64 @@ function bindEvents() {
       updateResponseTimeChart();
     }, 100);
   });
+  
+  // ===== 配置管理相关事件 =====
+  
+  // 配置管理按钮
+  const settingsBtn = document.getElementById('settingsBtn');
+  if (settingsBtn) {
+    settingsBtn.addEventListener('click', openSettingsModal);
+  }
+  
+  // 关闭配置弹窗按钮
+  const closeSettingsModal = document.getElementById('closeSettingsModal');
+  if (closeSettingsModal) {
+    closeSettingsModal.addEventListener('click', closeSettingsModal);
+  }
+  
+  // 取消配置按钮
+  const cancelSettingsBtn = document.getElementById('cancelSettingsBtn');
+  if (cancelSettingsBtn) {
+    cancelSettingsBtn.addEventListener('click', closeSettingsModal);
+  }
+  
+  // 保存设置按钮
+  const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+  if (saveSettingsBtn) {
+    saveSettingsBtn.addEventListener('click', saveSettings);
+  }
+  
+  // 添加节点按钮
+  const addNodeBtn = document.getElementById('addNodeBtn');
+  if (addNodeBtn) {
+    addNodeBtn.addEventListener('click', addNewNode);
+  }
+  
+  // 点击配置弹窗背景关闭
+  const settingsModal = document.getElementById('settingsModal');
+  if (settingsModal) {
+    settingsModal.addEventListener('click', (e) => {
+      if (e.target === settingsModal) {
+        closeSettingsModal();
+      }
+    });
+  }
+  
+  // 标签页切换
+  const tabBtns = document.querySelectorAll('.tab-btn');
+  tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tabId = btn.getAttribute('data-tab');
+      switchTab(tabId);
+    });
+  });
+  
+  // ESC 键关闭配置弹窗
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && settingsModal && settingsModal.classList.contains('active')) {
+      closeSettingsModal();
+    }
+  });
 }
 
 /**
@@ -1697,6 +1755,316 @@ function init3DCards() {
   });
   
   console.log('🎴 3D CARD EFFECT INITIALIZED');
+}
+
+// ===== 配置管理功能 =====
+
+// 配置管理相关 DOM 元素
+let settingsModal = null;
+let settingsMessage = null;
+let currentTab = 'general';
+
+/**
+ * 打开配置管理弹窗
+ */
+async function openSettingsModal() {
+  settingsModal = document.getElementById('settingsModal');
+  settingsMessage = document.getElementById('settingsMessage');
+  
+  if (!settingsModal) return;
+  
+  // 加载当前配置
+  await loadSettings();
+  
+  // 显示弹窗
+  settingsModal.classList.add('active');
+  
+  console.log('⚙️ SETTINGS MODAL OPENED');
+}
+
+/**
+ * 关闭配置管理弹窗
+ */
+function closeSettingsModal() {
+  if (settingsModal) {
+    settingsModal.classList.remove('active');
+    hideSettingsMessage();
+  }
+}
+
+/**
+ * 加载当前配置设置
+ */
+async function loadSettings() {
+  try {
+    const response = await fetch('/api/settings');
+    const result = await response.json();
+    
+    if (result.success) {
+      const settings = result.data;
+      
+      // 填充基础设置表单
+      document.getElementById('teamNameInput').value = settings.teamName || '';
+      document.getElementById('checkIntervalInput').value = settings.checkInterval || 30000;
+      document.getElementById('timeoutInput').value = settings.timeout || 5000;
+      document.getElementById('workspaceInput').value = settings.workspace || '';
+      
+      // 填充节点表格
+      renderNodesTable(settings.members || []);
+      
+      console.log('📋 SETTINGS LOADED');
+    }
+  } catch (err) {
+    console.error('⚠️ SETTINGS LOAD FAILED:', err);
+    showSettingsMessage('加载配置失败：' + err.message, 'error');
+  }
+}
+
+/**
+ * 渲染节点表格
+ * @param {Array} members - 成员列表
+ */
+function renderNodesTable(members) {
+  const tbody = document.getElementById('nodesTableBody');
+  if (!tbody) return;
+  
+  if (members.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" class="no-data">暂无自定义节点</td></tr>';
+    return;
+  }
+  
+  tbody.innerHTML = members.map(member => `
+    <tr data-node-id="${member.id}">
+      <td><code>${member.id}</code></td>
+      <td>${member.emoji || '🤖'} ${member.name}</td>
+      <td><span class="badge badge-info">${member.role}</span></td>
+      <td><small>${member.workspace || '-'}</small></td>
+      <td>
+        <button class="btn-small btn-edit" onclick="editNode('${member.id}')">✏️</button>
+        <button class="btn-small btn-delete" onclick="deleteNode('${member.id}')">🗑️</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+/**
+ * 切换标签页
+ * @param {string} tabId - 标签页 ID
+ */
+function switchTab(tabId) {
+  currentTab = tabId;
+  
+  // 更新按钮状态
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-tab') === tabId);
+  });
+  
+  // 更新内容显示
+  document.querySelectorAll('.tab-content').forEach(content => {
+    content.classList.toggle('active', content.id === `tab-${tabId}`);
+  });
+  
+  // 更新按钮显示
+  const addNodeBtn = document.getElementById('addNodeBtn');
+  const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+  
+  if (tabId === 'add-node') {
+    if (addNodeBtn) addNodeBtn.style.display = 'inline-flex';
+    if (saveSettingsBtn) saveSettingsBtn.style.display = 'none';
+  } else {
+    if (addNodeBtn) addNodeBtn.style.display = 'none';
+    if (saveSettingsBtn) saveSettingsBtn.style.display = 'inline-flex';
+  }
+  
+  console.log('📑 TAB SWITCHED:', tabId);
+}
+
+/**
+ * 保存设置
+ */
+async function saveSettings() {
+  const teamName = document.getElementById('teamNameInput').value.trim();
+  const checkInterval = parseInt(document.getElementById('checkIntervalInput').value);
+  const timeout = parseInt(document.getElementById('timeoutInput').value);
+  const workspace = document.getElementById('workspaceInput').value.trim();
+  
+  // 验证
+  if (!teamName) {
+    showSettingsMessage('团队名称不能为空', 'error');
+    return;
+  }
+  
+  if (checkInterval < 5000 || checkInterval > 300000) {
+    showSettingsMessage('检查间隔必须在 5000-300000ms 之间', 'error');
+    return;
+  }
+  
+  if (timeout < 1000 || timeout > 30000) {
+    showSettingsMessage('超时时间必须在 1000-30000ms 之间', 'error');
+    return;
+  }
+  
+  try {
+    const response = await fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        teamName,
+        checkInterval,
+        timeout,
+        workspace
+      })
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      showSettingsMessage('配置已保存！', 'success');
+      setTimeout(() => {
+        closeSettingsModal();
+        // 重新加载配置
+        loadConfig();
+      }, 1500);
+    } else {
+      showSettingsMessage('保存失败：' + result.error, 'error');
+    }
+  } catch (err) {
+    console.error('⚠️ SETTINGS SAVE FAILED:', err);
+    showSettingsMessage('保存配置失败：' + err.message, 'error');
+  }
+}
+
+/**
+ * 添加新节点
+ */
+async function addNewNode() {
+  const id = document.getElementById('newNodeId').value.trim();
+  const name = document.getElementById('newNodeName').value.trim();
+  const role = document.getElementById('newNodeRole').value.trim();
+  const emoji = document.getElementById('newNodeEmoji').value.trim() || '🤖';
+  const description = document.getElementById('newNodeDescription').value.trim();
+  const workspace = document.getElementById('newNodeWorkspace').value.trim();
+  
+  // 验证必填字段
+  if (!id || !name) {
+    showSettingsMessage('节点 ID 和名称为必填项', 'error');
+    return;
+  }
+  
+  // 验证 ID 格式
+  if (!/^[a-z0-9\-_]+$/.test(id)) {
+    showSettingsMessage('节点 ID 只能包含小写字母、数字、横线和下划线', 'error');
+    return;
+  }
+  
+  try {
+    const response = await fetch('/api/nodes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id,
+        name,
+        role: role || 'Agent',
+        emoji,
+        description,
+        workspace: workspace || 'workspace-team-a'
+      })
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      showSettingsMessage('节点已添加！', 'success');
+      
+      // 清空表单
+      document.getElementById('newNodeId').value = '';
+      document.getElementById('newNodeName').value = '';
+      document.getElementById('newNodeRole').value = '';
+      document.getElementById('newNodeEmoji').value = '🤖';
+      document.getElementById('newNodeDescription').value = '';
+      document.getElementById('newNodeWorkspace').value = '';
+      
+      // 刷新节点表格
+      await loadSettings();
+      
+      // 切换到节点管理标签页
+      setTimeout(() => switchTab('nodes'), 1500);
+    } else {
+      showSettingsMessage('添加失败：' + result.error, 'error');
+    }
+  } catch (err) {
+    console.error('⚠️ ADD NODE FAILED:', err);
+    showSettingsMessage('添加节点失败：' + err.message, 'error');
+  }
+}
+
+/**
+ * 编辑节点（全局函数，供 HTML 调用）
+ * @param {string} nodeId - 节点 ID
+ */
+window.editNode = async function(nodeId) {
+  // 切换到添加节点标签页并填充数据
+  switchTab('add-node');
+  
+  // 这里可以进一步实现：从 API 获取节点详情并填充表单
+  showSettingsMessage(`编辑节点：${nodeId}（功能开发中...）`, 'info');
+};
+
+/**
+ * 删除节点（全局函数，供 HTML 调用）
+ * @param {string} nodeId - 节点 ID
+ */
+window.deleteNode = async function(nodeId) {
+  if (!confirm(`确定要删除节点 "${nodeId}" 吗？此操作不可恢复！`)) {
+    return;
+  }
+  
+  try {
+    const response = await fetch(`/api/nodes/${nodeId}`, {
+      method: 'DELETE'
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      showSettingsMessage('节点已删除', 'success');
+      // 刷新节点表格
+      await loadSettings();
+    } else {
+      showSettingsMessage('删除失败：' + result.error, 'error');
+    }
+  } catch (err) {
+    console.error('⚠️ DELETE NODE FAILED:', err);
+    showSettingsMessage('删除节点失败：' + err.message, 'error');
+  }
+};
+
+/**
+ * 显示配置管理消息
+ * @param {string} message - 消息内容
+ * @param {string} type - 消息类型 (success, error, info)
+ */
+function showSettingsMessage(message, type = 'info') {
+  if (!settingsMessage) return;
+  
+  settingsMessage.textContent = message;
+  settingsMessage.className = `message-box message-${type}`;
+  settingsMessage.style.display = 'block';
+  
+  // 自动隐藏（成功消息 2 秒后，错误消息 5 秒后）
+  const autoHideTime = type === 'error' ? 5000 : 2000;
+  setTimeout(() => {
+    hideSettingsMessage();
+  }, autoHideTime);
+}
+
+/**
+ * 隐藏配置管理消息
+ */
+function hideSettingsMessage() {
+  if (settingsMessage) {
+    settingsMessage.style.display = 'none';
+  }
 }
 
 // 页面加载完成后初始化
