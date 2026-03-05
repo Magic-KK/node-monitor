@@ -47,6 +47,7 @@ const autoRefreshToggle = document.getElementById('autoRefresh');
 const refreshIntervalSelect = document.getElementById('refreshInterval');
 const themeSelect = document.getElementById('themeSelect');
 const fontSizeSelect = document.getElementById('fontSizeSelect');
+const languageSelect = document.getElementById('languageSelect');
 const lastUpdateEl = document.getElementById('lastUpdate');
 const totalNodesEl = document.getElementById('totalNodes');
 const onlineNodesEl = document.getElementById('onlineNodes');
@@ -371,6 +372,9 @@ async function init() {
   // 初始化主题
   initTheme();
   
+  // 初始化语言
+  initLanguage();
+  
   // 初始化音效
   initSound();
   
@@ -477,6 +481,19 @@ function initTheme() {
 }
 
 /**
+ * 初始化语言系统
+ */
+function initLanguage() {
+  const savedLanguage = getLanguage();
+  setLanguage(savedLanguage);
+  // 更新语言选择器的值
+  if (languageSelect) {
+    languageSelect.value = savedLanguage;
+  }
+  console.log('🌐 LANGUAGE INITIALIZED:', savedLanguage);
+}
+
+/**
  * 初始化音效系统
  */
 function initSound() {
@@ -531,11 +548,11 @@ function saveFavorites() {
 function toggleFavorite(nodeId) {
   if (favorites.has(nodeId)) {
     favorites.delete(nodeId);
-    showNotification('REMOVED FROM FAVORITES ⭐');
+    showNotification(t('notifyRemovedFromFavorites'));
     playSound('offline'); // 使用下线音效表示移除
   } else {
     favorites.add(nodeId);
-    showNotification('ADDED TO FAVORITES ⭐');
+    showNotification(t('notifyAddedToFavorites'));
     playSound('success'); // 使用成功音效表示添加
   }
   
@@ -672,7 +689,7 @@ function setTheme(theme) {
     light: '明亮简洁'
   };
   
-  showNotification(`THEME SWITCHED TO ${themeNames[theme] || theme.toUpperCase()}`);
+  showNotification(t('notifyThemeSwitched', { theme: themeNames[theme] || theme }));
   console.log('🎨 THEME SET TO:', theme);
 }
 
@@ -790,7 +807,7 @@ async function runHealthCheck() {
       updateLastUpdateTime(result.data.checkTime);
       
       // 显示成功提示
-      showNotification(`SCAN COMPLETE: ${result.data.onlineCount}/${result.data.configuredCount} NODES ONLINE`);
+      showNotification(t('notifyScanComplete', { online: result.data.onlineCount, total: result.data.configuredCount }));
       // 播放成功音效
       playSound('success');
     } else {
@@ -979,7 +996,7 @@ function clearSearch() {
   searchQuery = '';
   renderNodes(currentNodes);
   searchInput.focus();
-  showNotification('SEARCH CLEARED');
+  showNotification(t('notifySearchCleared'));
 }
 
 /**
@@ -1259,10 +1276,10 @@ function bindEvents() {
   // 自动刷新开关
   autoRefreshToggle.addEventListener('change', () => {
     if (autoRefreshToggle.checked) {
-      showNotification('AUTO-REFRESH ENABLED');
+      showNotification(t('notifyAutoRefreshEnabled'));
       startAutoRefresh();
     } else {
-      showNotification('AUTO-REFRESH DISABLED');
+      showNotification(t('notifyAutoRefreshDisabled'));
       if (autoRefreshInterval) {
         clearInterval(autoRefreshInterval);
         autoRefreshInterval = null;
@@ -1285,7 +1302,7 @@ function bindEvents() {
       
       // 格式化显示
       const intervalText = formatIntervalText(interval);
-      showNotification(`REFRESH INTERVAL: ${intervalText}`);
+      showNotification(t('notifyRefreshInterval', { interval: intervalText }));
       
       // 重新启动自动刷新（如果已启用）
       if (autoRefreshToggle.checked) {
@@ -1307,10 +1324,10 @@ function bindEvents() {
     soundToggle.addEventListener('change', () => {
       soundEnabled = soundToggle.checked;
       if (soundEnabled) {
-        showNotification('SOUND EFFECTS ENABLED 🔊');
+        showNotification(t('notifySoundEnabled'));
         playSound('success'); // 播放成功音效确认
       } else {
-        showNotification('SOUND EFFECTS DISABLED 🔇');
+        showNotification(t('notifySoundDisabled'));
       }
       // 保存到 localStorage
       localStorage.setItem('soundEnabled', soundEnabled);
@@ -1329,8 +1346,19 @@ function bindEvents() {
       applyFontSize(fontSize);
       // 保存到 localStorage
       localStorage.setItem('fontSize', fontSize);
-      showNotification(`FONT SIZE: ${getFontSizeLabel(fontSize)}`);
+      showNotification(t('notifyFontSizeChanged', { size: getFontSizeLabel(fontSize) }));
     });
+  }
+  
+  // 语言选择器
+  if (languageSelect) {
+    languageSelect.addEventListener('change', (e) => {
+      const lang = e.target.value;
+      setLanguage(lang);
+      const langNames = { zh: '中文', en: 'English' };
+      showNotification(t('notifyLanguageChanged', { lang: langNames[lang] || lang }));
+    });
+  }
   }
   
   // 搜索输入框
@@ -1360,7 +1388,7 @@ function bindEvents() {
       renderNodes(currentNodes);
       
       const groupName = selectedGroup === 'all' ? 'ALL GROUPS' : selectedGroup;
-      showNotification(`FILTER: ${groupName}`);
+      showNotification(t('notifyFilter', { group: groupName }));
     });
   }
   
@@ -1381,9 +1409,9 @@ function bindEvents() {
       renderNodes(currentNodes);
       
       if (showFavoritesOnly) {
-        showNotification(`SHOWING FAVORITES ONLY (${favorites.size} nodes) ⭐`);
+        showNotification(t('notifyFavoritesOnly', { count: favorites.size }));
       } else {
-        showNotification('SHOWING ALL NODES');
+        showNotification(t('notifyShowAllNodes'));
       }
     });
   }

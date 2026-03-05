@@ -1308,6 +1308,61 @@ body::after {
   box-shadow: 0 0 20px rgba(139, 38, 217, 0.3);
 }
 
+/* 语言选择器 */
+.language-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 20px;
+}
+
+.language-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.language-select {
+  padding: 6px 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--neon-purple);
+  border-radius: var(--border-radius);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  outline: none;
+  min-width: 100px;
+}
+
+.language-select:hover {
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 15px rgba(0, 245, 255, 0.3);
+}
+
+.language-select:focus {
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 20px rgba(0, 245, 255, 0.5);
+}
+
+[data-theme="light"] .language-select {
+  background: #f0f4f8;
+  border-color: #8b26d9;
+  color: #1a202e;
+}
+
+[data-theme="light"] .language-select:hover {
+  border-color: #008ba3;
+  box-shadow: 0 0 15px rgba(0, 139, 163, 0.2);
+}
+
+[data-theme="light"] .language-select:focus {
+  border-color: #008ba3;
+  box-shadow: 0 0 20px rgba(0, 139, 163, 0.3);
+}
+
 /* ===== 节点网格 ===== */
 .nodes-grid {
   display: grid;
