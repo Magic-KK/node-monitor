@@ -15,6 +15,8 @@ const nodesGrid = document.getElementById('nodesGrid');
 const refreshBtn = document.getElementById('refreshBtn');
 const healthCheckBtn = document.getElementById('healthCheckBtn');
 const autoRefreshToggle = document.getElementById('autoRefresh');
+const themeToggle = document.getElementById('themeToggle');
+const themeIcon = document.getElementById('themeIcon');
 const lastUpdateEl = document.getElementById('lastUpdate');
 const totalNodesEl = document.getElementById('totalNodes');
 const onlineNodesEl = document.getElementById('onlineNodes');
@@ -26,6 +28,9 @@ const offlineNodesEl = document.getElementById('offlineNodes');
 async function init() {
   console.log('🚀 SYSTEM INITIALIZING...');
   console.log('🤖 J.A.R.V.I.S. NODE MONITOR - CYBERPUNK EDITION');
+  
+  // 初始化主题
+  initTheme();
   
   // 加载配置
   await loadConfig();
@@ -40,6 +45,42 @@ async function init() {
   startAutoRefresh();
   
   console.log('✅ SYSTEM ONLINE');
+}
+
+/**
+ * 初始化主题（从 localStorage 读取或默认暗色模式）
+ */
+function initTheme() {
+  const savedTheme = localStorage.getItem('theme') || 'dark';
+  setTheme(savedTheme);
+  console.log('🎨 THEME INITIALIZED:', savedTheme);
+}
+
+/**
+ * 设置主题
+ * @param {string} theme - 'dark' 或 'light'
+ */
+function setTheme(theme) {
+  if (theme === 'light') {
+    document.documentElement.setAttribute('data-theme', 'light');
+    themeIcon.textContent = '☀️';
+    localStorage.setItem('theme', 'light');
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+    themeIcon.textContent = '🌙';
+    localStorage.setItem('theme', 'dark');
+  }
+}
+
+/**
+ * 切换主题
+ */
+function toggleTheme() {
+  const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+  const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+  setTheme(newTheme);
+  showNotification(`THEME SWITCHED TO ${newTheme.toUpperCase()} MODE`);
+  console.log('🎨 THEME TOGGLED:', newTheme);
 }
 
 /**
@@ -318,6 +359,9 @@ function bindEvents() {
       showNotification('AUTO-REFRESH DISABLED');
     }
   });
+  
+  // 主题切换按钮
+  themeToggle.addEventListener('click', toggleTheme);
   
   // 页面可见性变化时暂停/恢复刷新
   document.addEventListener('visibilitychange', () => {

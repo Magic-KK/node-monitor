@@ -5,7 +5,7 @@
  * @author 牛开发 🐮💻
  */
 
-/* ===== 变量定义 ===== */
+/* ===== 变量定义 - 暗色模式（默认） ===== */
 :root {
   /* 核心配色 - 赛博朋克霓虹 */
   --bg-dark: #030014;
@@ -40,6 +40,40 @@
   --shadow-glow: 0 0 20px rgba(0, 245, 255, 0.3);
   --shadow-glow-strong: 0 0 40px rgba(0, 245, 255, 0.5);
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ===== 亮色模式变量 ===== */
+[data-theme="light"] {
+  /* 核心配色 - 明亮简洁 */
+  --bg-dark: #f0f2f5;
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f7fa;
+  --bg-card: rgba(255, 255, 255, 0.95);
+  --bg-card-hover: rgba(255, 255, 255, 1);
+  
+  /* 霓虹色（降低饱和度） */
+  --neon-cyan: #008ba3;
+  --neon-blue: #0052cc;
+  --neon-purple: #8b26d9;
+  --neon-pink: #e6005c;
+  --neon-green: #00a862;
+  --neon-yellow: #d4b106;
+  
+  /* 状态色 */
+  --success: #00a862;
+  --warning: #d4b106;
+  --danger: #e6005c;
+  --info: #008ba3;
+  
+  /* 文本 */
+  --text-primary: #1a1a2e;
+  --text-secondary: #4a4a6a;
+  --text-muted: #8a8aaa;
+  --text-glow: none;
+  
+  /* 效果 */
+  --shadow-glow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  --shadow-glow-strong: 0 8px 40px rgba(0, 0, 0, 0.15);
 }
 
 /* ===== 基础样式 ===== */
@@ -81,7 +115,7 @@ body::before {
   100% { transform: translate(50px, 50px); }
 }
 
-/* 扫描线效果 */
+/* 扫描线效果（仅暗色模式） */
 body::after {
   content: '';
   position: fixed;
@@ -99,6 +133,19 @@ body::after {
   pointer-events: none;
   z-index: 1000;
   opacity: 0.3;
+}
+
+/* 亮色模式移除扫描线 */
+[data-theme="light"] body::after {
+  display: none;
+}
+
+/* 亮色模式网格背景调整 */
+[data-theme="light"] body::before {
+  background-image: 
+    linear-gradient(rgba(0, 139, 163, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 139, 163, 0.08) 1px, transparent 1px);
+  animation: none;
 }
 
 .container {
@@ -430,6 +477,60 @@ body::after {
   margin-left: 20px;
   font-family: 'Courier New', monospace;
   text-shadow: 0 0 10px rgba(0, 245, 255, 0.3);
+}
+
+/* 主题切换按钮 */
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: 20px;
+}
+
+.theme-toggle-label {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.theme-btn {
+  background: rgba(18, 18, 42, 0.5);
+  border: 1px solid rgba(0, 245, 255, 0.3);
+  border-radius: var(--border-radius);
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-primary);
+  font-size: 1.2rem;
+  box-shadow: 0 0 15px rgba(0, 245, 255, 0.2);
+}
+
+.theme-btn:hover {
+  background: rgba(0, 245, 255, 0.15);
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 25px rgba(0, 245, 255, 0.4);
+  transform: translateY(-2px);
+}
+
+.theme-btn:active {
+  transform: translateY(0);
+}
+
+/* 亮色模式下的主题按钮 */
+[data-theme="light"] .theme-btn {
+  background: rgba(255, 255, 255, 0.8);
+  border-color: rgba(0, 139, 163, 0.3);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .theme-btn:hover {
+  background: rgba(0, 139, 163, 0.1);
+  border-color: var(--neon-cyan);
+  box-shadow: 0 4px 20px rgba(0, 139, 163, 0.2);
 }
 
 /* ===== 节点网格 ===== */
