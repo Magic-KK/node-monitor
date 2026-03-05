@@ -36,6 +36,8 @@ let isRefreshing = false;
 let currentNodes = []; // 缓存当前节点数据用于搜索过滤
 let searchQuery = ''; // 当前搜索关键词
 let selectedGroup = 'all'; // 当前选中的分组
+let favorites = new Set(); // 收藏的节点 ID 集合
+let showFavoritesOnly = false; // 是否只显示收藏节点
 
 // DOM 元素
 const nodesGrid = document.getElementById('nodesGrid');
@@ -51,6 +53,7 @@ const offlineNodesEl = document.getElementById('offlineNodes');
 const searchInput = document.getElementById('searchInput');
 const clearSearchBtn = document.getElementById('clearSearchBtn');
 const groupFilter = document.getElementById('groupFilter');
+const favoritesFilter = document.getElementById('favoritesFilter');
 
 // 系统指标元素
 const cpuUsageEl = document.getElementById('cpuUsage');
@@ -370,6 +373,9 @@ async function init() {
   // 初始化音效
   initSound();
   
+  // 初始化收藏功能
+  initFavorites();
+  
   // 加载配置
   updateLoadingProgress(20, 'LOADING CONFIGURATION...');
   await loadConfig();
@@ -476,6 +482,82 @@ function initSound() {
     }
   }
   console.log('🔊 SOUND INITIALIZED:', soundEnabled ? 'ENABLED' : 'DISABLED');
+}
+
+/**
+ * 初始化收藏功能
+ */
+function initFavorites() {
+  // 从 localStorage 读取收藏列表
+  const savedFavorites = localStorage.getItem('nodeFavorites');
+  if (savedFavorites) {
+    try {
+      const favoriteIds = JSON.parse(savedFavorites);
+      favorites = new Set(favoriteIds);
+      console.log('⭐ FAVORITES LOADED:', favorites.size, 'nodes');
+    } catch (err) {
+      console.error('⚠️ 读取收藏列表失败:', err);
+      favorites = new Set();
+    }
+  } else {
+    favorites = new Set();
+  }
+  console.log('⭐ FAVORITE SYSTEM INITIALIZED');
+}
+
+/**
+ * 保存收藏列表到 localStorage
+ */
+function saveFavorites() {
+  try {
+    localStorage.setItem('nodeFavorites', JSON.stringify(Array.from(favorites)));
+    console.log('💾 FAVORITES SAVED:', favorites.size, 'nodes');
+  } catch (err) {
+    console.error('⚠️ 保存收藏列表失败:', err);
+  }
+}
+
+/**
+ * 切换节点收藏状态
+ * @param {string} nodeId - 节点 ID
+ */
+function toggleFavorite(nodeId) {
+  if (favorites.has(nodeId)) {
+    favorites.delete(nodeId);
+    showNotification('REMOVED FROM FAVORITES ⭐');
+    playSound('offline'); // 使用下线音效表示移除
+  } else {
+    favorites.add(nodeId);
+    showNotification('ADDED TO FAVORITES ⭐');
+    playSound('success'); // 使用成功音效表示添加
+  }
+  
+  saveFavorites();
+  
+  // 重新渲染节点卡片（更新收藏按钮状态）
+  renderNodes(currentNodes);
+}
+
+/**
+ * 检查节点是否已收藏
+ * @param {string} nodeId - 节点 ID
+ * @returns {boolean} 是否已收藏
+ */
+function isFavorite(nodeId) {
+  return favorites.has(nodeId);
+}
+
+/**
+ * 过滤收藏节点
+ * @param {Array} nodes - 节点数组
+ * @returns {Array} 过滤后的节点数组
+ */
+function filterFavorites(nodes) {
+  if (!showFavoritesOnly) {
+    return nodes;
+  }
+  
+  return nodes.filter(node => favorites.has(node.id));
 }
 
 /**
@@ -713,17 +795,22 @@ function renderNodes(nodes) {
   // 缓存当前节点数据
   currentNodes = nodes;
   
-  // 先按组过滤，再按搜索关键词过滤
+  // 过滤链：分组 -> 收藏 -> 搜索
   const groupedNodes = filterNodesByGroup(nodes, selectedGroup);
-  const filteredNodes = filterNodes(groupedNodes, searchQuery);
+  const favoriteFilteredNodes = filterFavorites(groupedNodes);
+  const filteredNodes = filterNodes(favoriteFilteredNodes, searchQuery);
   
   // 生成 HTML
   if (filteredNodes.length === 0) {
+    const noResultsMessage = showFavoritesOnly && favorites.size === 0 
+      ? 'No favorites yet. Click the star icon on a node to add it!'
+      : 'Try adjusting your search query';
+    
     nodesGrid.innerHTML = `
       <div class="no-results">
-        <div class="no-results-icon">🔍</div>
+        <div class="no-results-icon">${showFavoritesOnly ? '⭐' : '🔍'}</div>
         <div class="no-results-title">NO NODES FOUND</div>
-        <div class="no-results-text">Try adjusting your search query</div>
+        <div class="no-results-text">${noResultsMessage}</div>
       </div>
     `;
   } else {
@@ -883,6 +970,11 @@ function createNodeCard(node) {
     statusBadgeClass = 'status-offline';
   }
   
+  // 检查是否已收藏
+  const isFavorited = isFavorite(node.id);
+  const favoriteClass = isFavorited ? 'favorited' : '';
+  const favoriteIcon = isFavorited ? '⭐' : '☆';
+  
   return `
     <div class="node-card ${statusClass}" data-node-id="${node.id}" style="cursor: pointer;">
       <div class="node-header">
@@ -890,6 +982,14 @@ function createNodeCard(node) {
         <div class="node-info">
           <div class="node-name">${node.name}</div>
           <div class="node-role">${node.role || 'NODE'}</div>
+        </div>
+        <div class="node-actions">
+          <button class="favorite-btn ${favoriteClass}" 
+                  data-node-id="${node.id}" 
+                  title="${isFavorited ? 'Remove from favorites' : 'Add to favorites'}"
+                  onclick="event.stopPropagation(); toggleFavorite('${node.id}')">
+            ${favoriteIcon}
+          </button>
         </div>
         <span class="status-badge ${statusBadgeClass}">
           <span class="status-dot"></span>
@@ -1199,6 +1299,30 @@ function bindEvents() {
       
       const groupName = selectedGroup === 'all' ? 'ALL GROUPS' : selectedGroup;
       showNotification(`FILTER: ${groupName}`);
+    });
+  }
+  
+  // 收藏筛选器
+  if (favoritesFilter) {
+    // 从 localStorage 读取收藏筛选状态
+    const savedFavoritesFilter = localStorage.getItem('showFavoritesOnly');
+    if (savedFavoritesFilter === 'true') {
+      showFavoritesOnly = true;
+      favoritesFilter.checked = true;
+    }
+    
+    favoritesFilter.addEventListener('change', (e) => {
+      showFavoritesOnly = favoritesFilter.checked;
+      // 保存到 localStorage
+      localStorage.setItem('showFavoritesOnly', showFavoritesOnly);
+      
+      renderNodes(currentNodes);
+      
+      if (showFavoritesOnly) {
+        showNotification(`SHOWING FAVORITES ONLY (${favorites.size} nodes) ⭐`);
+      } else {
+        showNotification('SHOWING ALL NODES');
+      }
     });
   }
   
