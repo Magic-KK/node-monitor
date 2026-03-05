@@ -2162,6 +2162,313 @@ async function exportToCSV() {
   }
 }
 
+// ===== 历史趋势功能 =====
+
+let historyChartInstance = null;
+
+/**
+ * 打开历史趋势弹窗
+ */
+async function openHistoryModal() {
+  const historyModal = document.getElementById('historyModal');
+  if (!historyModal) return;
+  
+  historyModal.classList.add('active');
+  
+  // 加载历史数据
+  await loadHistoryStats(parseInt(document.getElementById('historyDaysSelect')?.value || 7));
+  await loadHistoryRecords();
+}
+
+/**
+ * 关闭历史弹窗
+ */
+function closeHistoryModalFunc() {
+  const historyModal = document.getElementById('historyModal');
+  if (historyModal) {
+    historyModal.classList.remove('active');
+  }
+}
+
+/**
+ * 加载历史统计数据
+ */
+async function loadHistoryStats(days = 7) {
+  const summaryEl = document.getElementById('historySummary');
+  if (!summaryEl) return;
+  
+  try {
+    const response = await fetch(`/api/history/stats?days=${days}`);
+    const result = await response.json();
+    
+    if (!result.success) {
+      summaryEl.innerHTML = '<p class="error">加载失败</p>';
+      return;
+    }
+    
+    const data = result.data;
+    const totalChecks = data.totalRecords || 0;
+    
+    // 计算整体统计
+    let totalOnline = 0;
+    let totalOffline = 0;
+    let highUptimeNodes = 0;
+    
+    data.nodes.forEach(node => {
+      totalOnline += node.onlineCount;
+      totalOffline += node.offlineCount;
+      if (node.uptime >= 95) highUptimeNodes++;
+    });
+    
+    const overallUptime = (totalOnline + totalOffline) > 0 
+      ? Math.round((totalOnline / (totalOnline + totalOffline)) * 100 * 100) / 100
+      : 0;
+    
+    // 生成统计卡片
+    summaryEl.innerHTML = `
+      <div class="history-stat-card">
+        <span class="history-stat-value">${totalChecks}</span>
+        <span class="history-stat-label">总检查次数</span>
+      </div>
+      <div class="history-stat-card">
+        <span class="history-stat-value">${data.nodes.length}</span>
+        <span class="history-stat-label">监控节点</span>
+      </div>
+      <div class="history-stat-card">
+        <span class="history-stat-value" style="color: ${overallUptime >= 95 ? '#00ff88' : overallUptime >= 80 ? '#ffa500' : '#ff4757'}">${overallUptime}%</span>
+        <span class="history-stat-label">平均在线率</span>
+      </div>
+      <div class="history-stat-card">
+        <span class="history-stat-value">${highUptimeNodes}</span>
+        <span class="history-stat-label">高可用节点 (>95%)</span>
+      </div>
+    `;
+    
+    // 绘制趋势图表
+    drawHistoryChart(data.nodes);
+    
+  } catch (err) {
+    console.error('❌ 加载历史统计失败:', err);
+    summaryEl.innerHTML = '<p class="error">加载失败：' + err.message + '</p>';
+  }
+}
+
+/**
+ * 绘制历史趋势图表
+ */
+function drawHistoryChart(nodes) {
+  const canvas = document.getElementById('historyChart');
+  if (!canvas) return;
+  
+  const ctx = canvas.getContext('2d');
+  
+  // 销毁旧图表
+  if (historyChartInstance) {
+    historyChartInstance.destroy();
+  }
+  
+  // 设置画布大小
+  canvas.width = canvas.offsetWidth;
+  canvas.height = 300;
+  
+  // 准备数据
+  const labels = nodes.map(n => n.name || n.id);
+  const uptimeData = nodes.map(n => n.uptime);
+  
+  // 创建渐变背景
+  const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+  gradient.addColorStop(0, 'rgba(0, 245, 255, 0.3)');
+  gradient.addColorStop(1, 'rgba(0, 245, 255, 0.05)');
+  
+  // 绘制图表
+  const chartData = {
+    labels: labels,
+    datasets: [{
+      label: '在线率 (%)',
+      data: uptimeData,
+      borderColor: '#00f5ff',
+      backgroundColor: gradient,
+      borderWidth: 2,
+      fill: true,
+      tension: 0.4,
+      pointBackgroundColor: '#00f5ff',
+      pointBorderColor: '#fff',
+      pointBorderWidth: 2,
+      pointRadius: 4,
+      pointHoverRadius: 6
+    }]
+  };
+  
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: false
+      },
+      tooltip: {
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        titleColor: '#00f5ff',
+        bodyColor: '#fff',
+        borderColor: 'rgba(0, 245, 255, 0.3)',
+        borderWidth: 1,
+        padding: 12,
+        displayColors: false,
+        callbacks: {
+          label: function(context) {
+            return `在线率：${context.parsed.y}%`;
+          }
+        }
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        max: 100,
+        grid: {
+          color: 'rgba(255, 255, 255, 0.1)'
+        },
+        ticks: {
+          color: '#8b9bb4',
+          callback: function(value) {
+            return value + '%';
+          }
+        }
+      },
+      x: {
+        grid: {
+          color: 'rgba(255, 255, 255, 0.05)'
+        },
+        ticks: {
+          color: '#8b9bb4',
+          maxRotation: 45,
+          minRotation: 45
+        }
+      }
+    }
+  };
+  
+  // 使用 Chart.js 绘制（如果已加载）
+  if (typeof Chart !== 'undefined') {
+    historyChartInstance = new Chart(ctx, {
+      type: 'line',
+      data: chartData,
+      options: chartOptions
+    });
+  } else {
+    // 简单绘制备用图表
+    drawSimpleChart(ctx, canvas.width, canvas.height, labels, uptimeData);
+  }
+}
+
+/**
+ * 简单图表绘制（无 Chart.js 时备用）
+ */
+function drawSimpleChart(ctx, width, height, labels, data) {
+  const padding = 40;
+  const chartWidth = width - padding * 2;
+  const chartHeight = height - padding * 2;
+  
+  // 清空画布
+  ctx.clearRect(0, 0, width, height);
+  
+  // 绘制背景
+  ctx.fillStyle = 'rgba(0, 245, 255, 0.05)';
+  ctx.fillRect(padding, padding, chartWidth, chartHeight);
+  
+  // 绘制网格线
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 5; i++) {
+    const y = padding + (chartHeight / 5) * i;
+    ctx.beginPath();
+    ctx.moveTo(padding, y);
+    ctx.lineTo(width - padding, y);
+    ctx.stroke();
+  }
+  
+  // 绘制数据线
+  if (data.length > 0) {
+    const pointSpacing = chartWidth / (data.length - 1 || 1);
+    
+    ctx.strokeStyle = '#00f5ff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    
+    data.forEach((value, index) => {
+      const x = padding + index * pointSpacing;
+      const y = padding + chartHeight - (value / 100) * chartHeight;
+      
+      if (index === 0) {
+        ctx.moveTo(x, y);
+      } else {
+        ctx.lineTo(x, y);
+      }
+    });
+    
+    ctx.stroke();
+    
+    // 绘制数据点
+    data.forEach((value, index) => {
+      const x = padding + index * pointSpacing;
+      const y = padding + chartHeight - (value / 100) * chartHeight;
+      
+      ctx.fillStyle = '#00f5ff';
+      ctx.beginPath();
+      ctx.arc(x, y, 4, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
+}
+
+/**
+ * 加载历史记录表格
+ */
+async function loadHistoryRecords() {
+  const tbody = document.getElementById('historyTableBody');
+  if (!tbody) return;
+  
+  try {
+    const response = await fetch('/api/history?limit=20');
+    const result = await response.json();
+    
+    if (!result.success || !result.data.records || result.data.records.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-secondary);">暂无历史记录</td></tr>';
+      return;
+    }
+    
+    const records = result.data.records;
+    
+    // 生成表格行
+    tbody.innerHTML = records.map(record => {
+      const time = new Date(record.timestamp).toLocaleString('zh-CN');
+      const nodesHtml = record.nodes.map(node => {
+        const statusClass = node.online ? 'online' : 'offline';
+        const statusText = node.online ? '🟢 在线' : '🔴 离线';
+        const responseTime = node.responseTime !== null ? `${Math.round(node.responseTime)}ms` : '-';
+        
+        return `
+          <tr>
+            <td>${time}</td>
+            <td>${node.name || node.id}</td>
+            <td><span class="history-status ${statusClass}">${statusText}</span></td>
+            <td>${responseTime}</td>
+            <td class="history-uptime ${record.summary.onlineCount / record.summary.totalNodes >= 0.95 ? 'high' : record.summary.onlineCount / record.summary.totalNodes >= 0.8 ? 'medium' : 'low'}">
+              ${Math.round(record.summary.onlineCount / record.summary.totalNodes * 100)}%
+            </td>
+          </tr>
+        `;
+      }).join('');
+      
+      return nodesHtml;
+    }).join('');
+    
+  } catch (err) {
+    console.error('❌ 加载历史记录失败:', err);
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #ff4757;">加载失败</td></tr>';
+  }
+}
+
 // 页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', init);
 
