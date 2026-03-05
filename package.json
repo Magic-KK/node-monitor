@@ -1,7 +1,7 @@
 {
   "name": "node-monitor",
-  "version": "1.29.0",
-  "description": "J.A.R.V.I.S. 团队节点状态监控服务 - 配置热更新增强版",
+  "version": "1.30.0",
+  "description": "J.A.R.V.I.S. 团队节点状态监控服务 - 粒子背景动画增强版",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

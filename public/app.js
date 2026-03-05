@@ -278,6 +278,11 @@ const PARTICLE_CONFIG = {
   maxSpeed: 0.8, // 最大速度
   connectionDistance: 150, // 连线距离
   mouseDistance: 200, // 鼠标互动距离
+  pulseSpeed: 0.02, // 脉冲速度（呼吸效果）
+  pulseAmount: 0.5, // 脉冲幅度（大小变化比例）
+  flickerChance: 0.02, // 闪烁概率
+  flickerAmount: 0.3, // 闪烁幅度
+  colorShiftSpeed: 0.005, // 颜色渐变速度
   colors: {
     dark: ['rgba(0, 245, 255, 0.5)', 'rgba(185, 38, 255, 0.5)', 'rgba(0, 102, 255, 0.5)'],
     light: ['rgba(0, 139, 163, 0.4)', 'rgba(139, 38, 217, 0.4)', 'rgba(0, 82, 204, 0.4)']
@@ -2598,11 +2603,16 @@ function createParticles() {
     particles.push({
       x: Math.random() * particleCanvas.width,
       y: Math.random() * particleCanvas.height,
+      baseSize: Math.random() * (PARTICLE_CONFIG.maxSize - PARTICLE_CONFIG.minSize) + PARTICLE_CONFIG.minSize,
       size: Math.random() * (PARTICLE_CONFIG.maxSize - PARTICLE_CONFIG.minSize) + PARTICLE_CONFIG.minSize,
       speedX: (Math.random() - 0.5) * (Math.random() < 0.5 ? PARTICLE_CONFIG.minSpeed : PARTICLE_CONFIG.maxSpeed),
       speedY: (Math.random() - 0.5) * (Math.random() < 0.5 ? PARTICLE_CONFIG.minSpeed : PARTICLE_CONFIG.maxSpeed),
       color: colors[Math.floor(Math.random() * colors.length)],
-      opacity: Math.random() * 0.5 + 0.3
+      baseColor: colors[Math.floor(Math.random() * colors.length)],
+      opacity: Math.random() * 0.5 + 0.3,
+      baseOpacity: Math.random() * 0.5 + 0.3,
+      pulsePhase: Math.random() * Math.PI * 2, // 脉冲相位（随机起始角度）
+      colorOffset: Math.random() * 1000 // 颜色偏移（用于渐变动画）
     });
   }
 }
@@ -2617,7 +2627,7 @@ function handleMouseMove(e) {
 }
 
 /**
- * 更新粒子位置
+ * 更新粒子位置（增强版：添加脉冲呼吸和闪烁效果）
  */
 function updateParticles() {
   const isLightTheme = document.documentElement.getAttribute('data-theme') === 'light';
@@ -2652,11 +2662,30 @@ function updateParticles() {
         particle.y -= pushY;
       }
     }
+    
+    // ✨ 脉冲呼吸效果（大小周期性变化）
+    particle.pulsePhase += PARTICLE_CONFIG.pulseSpeed;
+    const pulseFactor = 1 + Math.sin(particle.pulsePhase) * PARTICLE_CONFIG.pulseAmount;
+    particle.size = particle.baseSize * pulseFactor;
+    
+    // ✨ 闪烁效果（随机透明度变化）
+    if (Math.random() < PARTICLE_CONFIG.flickerChance) {
+      const flickerFactor = 1 - Math.random() * PARTICLE_CONFIG.flickerAmount;
+      particle.opacity = particle.baseOpacity * flickerFactor;
+    } else {
+      // 逐渐恢复基础透明度
+      particle.opacity += (particle.baseOpacity - particle.opacity) * 0.1;
+    }
+    
+    // ✨ 颜色渐变效果（缓慢循环颜色）
+    particle.colorOffset += PARTICLE_CONFIG.colorShiftSpeed;
+    const colorIndex = Math.floor((particle.colorOffset % colors.length + colors.length) % colors.length);
+    particle.color = colors[colorIndex];
   });
 }
 
 /**
- * 绘制粒子
+ * 绘制粒子（增强版：添加多层辉光和脉冲效果）
  */
 function drawParticles() {
   if (!particleCtx) return;
@@ -2667,17 +2696,38 @@ function drawParticles() {
   // 绘制粒子连线
   drawConnections();
   
-  // 绘制粒子
+  // 绘制粒子（带多层辉光效果）
   particles.forEach(particle => {
+    // 外层辉光（大范围弱光晕）
     particleCtx.beginPath();
-    particleCtx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-    particleCtx.fillStyle = particle.color;
+    particleCtx.arc(particle.x, particle.y, particle.size * 2.5, 0, Math.PI * 2);
+    const gradient = particleCtx.createRadialGradient(
+      particle.x, particle.y, 0,
+      particle.x, particle.y, particle.size * 2.5
+    );
+    gradient.addColorStop(0, particle.color.replace(/[\d.]+\)$/g, `${particle.opacity * 0.3})`));
+    gradient.addColorStop(1, particle.color.replace(/[\d.]+\)$/g, '0)'));
+    particleCtx.fillStyle = gradient;
     particleCtx.globalAlpha = particle.opacity;
     particleCtx.fill();
     
-    // 添加辉光效果
-    particleCtx.shadowBlur = 15;
+    // 中层辉光（中等范围）
+    particleCtx.beginPath();
+    particleCtx.arc(particle.x, particle.y, particle.size * 1.5, 0, Math.PI * 2);
+    particleCtx.fillStyle = particle.color;
+    particleCtx.globalAlpha = particle.opacity * 0.6;
+    particleCtx.shadowBlur = 20;
     particleCtx.shadowColor = particle.color;
+    particleCtx.fill();
+    
+    // 核心粒子（最亮）
+    particleCtx.beginPath();
+    particleCtx.arc(particle.x, particle.y, particle.size * 0.8, 0, Math.PI * 2);
+    particleCtx.fillStyle = particle.color.replace(/[\d.]+\)$/g, '1)');
+    particleCtx.globalAlpha = particle.opacity;
+    particleCtx.shadowBlur = 10;
+    particleCtx.shadowColor = '#ffffff';
+    particleCtx.fill();
   });
   
   particleCtx.globalAlpha = 1;
@@ -2685,10 +2735,12 @@ function drawParticles() {
 }
 
 /**
- * 绘制粒子之间的连线
+ * 绘制粒子之间的连线（增强版：添加脉冲流动效果）
  */
 function drawConnections() {
   const isLightTheme = document.documentElement.getAttribute('data-theme') === 'light';
+  const baseColor = isLightTheme ? '0, 139, 163' : '0, 245, 255';
+  const time = Date.now() * 0.001; // 时间因子用于动画
   
   for (let i = 0; i < particles.length; i++) {
     for (let j = i + 1; j < particles.length; j++) {
@@ -2697,22 +2749,46 @@ function drawConnections() {
       const distance = Math.sqrt(dx * dx + dy * dy);
       
       if (distance < PARTICLE_CONFIG.connectionDistance) {
-        const opacity = (1 - distance / PARTICLE_CONFIG.connectionDistance) * 0.5;
+        // 基础透明度（基于距离）
+        const baseOpacity = (1 - distance / PARTICLE_CONFIG.connectionDistance) * 0.5;
         
+        // 脉冲效果：基于时间和粒子相位的透明度波动
+        const pulsePhase = (particles[i].pulsePhase + particles[j].pulsePhase) / 2;
+        const pulseFactor = 0.7 + 0.3 * Math.sin(pulsePhase + time * 2);
+        const opacity = baseOpacity * pulseFactor;
+        
+        // 绘制连线
         particleCtx.beginPath();
-        particleCtx.strokeStyle = isLightTheme 
-          ? `rgba(0, 139, 163, ${opacity})`
-          : `rgba(0, 245, 255, ${opacity})`;
+        particleCtx.strokeStyle = `rgba(${baseColor}, ${opacity})`;
         particleCtx.lineWidth = 0.5;
         particleCtx.globalAlpha = opacity;
         particleCtx.moveTo(particles[i].x, particles[i].y);
         particleCtx.lineTo(particles[j].x, particles[j].y);
         particleCtx.stroke();
+        
+        // ✨ 添加流动光点效果（在连线上移动的小光点）
+        const flowSpeed = 0.5;
+        const flowPos = ((time * flowSpeed) % 1);
+        const flowX = particles[i].x + (particles[j].x - particles[i].x) * flowPos;
+        const flowY = particles[i].y + (particles[j].y - particles[i].y) * flowPos;
+        
+        // 只在连线中间区域显示流动光点
+        if (flowPos > 0.1 && flowPos < 0.9) {
+          particleCtx.beginPath();
+          particleCtx.arc(flowX, flowY, 1.5, 0, Math.PI * 2);
+          particleCtx.fillStyle = isLightTheme 
+            ? `rgba(255, 255, 255, ${opacity * 0.8})`
+            : `rgba(255, 255, 255, ${opacity})`;
+          particleCtx.shadowBlur = 8;
+          particleCtx.shadowColor = '#ffffff';
+          particleCtx.fill();
+        }
       }
     }
   }
   
   particleCtx.globalAlpha = 1;
+  particleCtx.shadowBlur = 0;
 }
 
 // 粒子动画帧率控制

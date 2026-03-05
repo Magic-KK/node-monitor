@@ -113,6 +113,7 @@ const i18n = {
     notifyLanguageChanged: '语言已切换为 {lang}',
     notifyThemeChanged: '主题已切换为 {theme}',
     notifyFontSizeChanged: '字体大小已设置为 {size}',
+    notifyParticleEnhanced: '粒子背景动画已增强 ✨',
     notifyRemovedFromFavorites: '已从收藏移除 ⭐',
     notifyAddedToFavorites: '已添加到收藏 ⭐',
     notifyNodeReordered: '节点顺序已调整 🔄',
@@ -382,6 +383,7 @@ const i18n = {
     notifyLanguageChanged: 'Language switched to {lang}',
     notifyThemeChanged: 'Theme switched to {theme}',
     notifyFontSizeChanged: 'Font size set to {size}',
+    notifyParticleEnhanced: 'Particle background animation enhanced ✨',
     
     // Confirm dialogs
     confirmTitle: 'Confirm Action',
