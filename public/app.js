@@ -1449,6 +1449,72 @@ function bindEvents() {
     });
   }
   
+  // ===== 日志标签页切换 =====
+  const logsTabBtns = document.querySelectorAll('.logs-tab-btn');
+  logsTabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tabId = btn.dataset.tab;
+      
+      // 移除所有 active 类
+      logsTabBtns.forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.logs-tab-content').forEach(c => c.classList.remove('active'));
+      
+      // 添加 active 类到当前标签页
+      btn.classList.add('active');
+      const targetContent = document.getElementById(`logsTab-${tabId}`);
+      if (targetContent) {
+        targetContent.classList.add('active');
+      }
+      
+      // 加载对应标签页的数据
+      if (tabId === 'aggregate') {
+        loadAggregateStats();
+      } else if (tabId === 'trend') {
+        loadTrendAnalysis();
+      }
+    });
+  });
+  
+  // 聚合统计刷新按钮
+  const refreshAggregateBtn = document.getElementById('refreshAggregateBtn');
+  if (refreshAggregateBtn) {
+    refreshAggregateBtn.addEventListener('click', loadAggregateStats);
+  }
+  
+  // 聚合统计过滤变化
+  const aggregateGroupBy = document.getElementById('aggregateGroupBy');
+  const aggregateTimeRange = document.getElementById('aggregateTimeRange');
+  if (aggregateGroupBy) aggregateGroupBy.addEventListener('change', loadAggregateStats);
+  if (aggregateTimeRange) aggregateTimeRange.addEventListener('change', loadAggregateStats);
+  
+  // 趋势分析刷新按钮
+  const refreshTrendBtn = document.getElementById('refreshTrendBtn');
+  if (refreshTrendBtn) {
+    refreshTrendBtn.addEventListener('click', loadTrendAnalysis);
+  }
+  
+  // 趋势分析过滤变化
+  const trendInterval = document.getElementById('trendInterval');
+  const trendTimeRange = document.getElementById('trendTimeRange');
+  if (trendInterval) trendInterval.addEventListener('change', loadTrendAnalysis);
+  if (trendTimeRange) trendTimeRange.addEventListener('change', loadTrendAnalysis);
+  
+  // 日志搜索按钮
+  const searchLogsBtn = document.getElementById('searchLogsBtn');
+  if (searchLogsBtn) {
+    searchLogsBtn.addEventListener('click', searchLogs);
+  }
+  
+  // 日志搜索回车键触发
+  const logSearchKeyword = document.getElementById('logSearchKeyword');
+  if (logSearchKeyword) {
+    logSearchKeyword.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        searchLogs();
+      }
+    });
+  }
+  
   // ===== 配置管理相关事件 =====
   
   // 配置管理按钮
@@ -3456,6 +3522,459 @@ function scrollToBottom() {
   const logsContainer = document.getElementById('logsContainer');
   if (logsContainer) {
     logsContainer.scrollTop = logsContainer.scrollHeight;
+  }
+}
+
+// ===== 日志聚合统计功能 =====
+
+/**
+ * 加载聚合统计数据
+ */
+async function loadAggregateStats() {
+  try {
+    const groupBy = document.getElementById('aggregateGroupBy')?.value || 'level';
+    const timeRange = document.getElementById('aggregateTimeRange')?.value || '1h';
+    const cardsContainer = document.getElementById('aggregateCards');
+    
+    if (!cardsContainer) return;
+    
+    const response = await fetch(`/api/logs/aggregate?groupBy=${groupBy}&timeRange=${timeRange}`);
+    const result = await response.json();
+    
+    if (result.success) {
+      const { aggregated, totalLogs } = result.data;
+      
+      // 渲染统计卡片
+      if (groupBy === 'level') {
+        cardsContainer.innerHTML = `
+          <div class="aggregate-card total">
+            <span class="aggregate-card-icon">📊</span>
+            <div class="aggregate-card-value">${totalLogs}</div>
+            <div class="aggregate-card-label">总日志数</div>
+          </div>
+          <div class="aggregate-card success">
+            <span class="aggregate-card-icon">✅</span>
+            <div class="aggregate-card-value">${aggregated.SUCCESS || 0}</div>
+            <div class="aggregate-card-label">成功</div>
+          </div>
+          <div class="aggregate-card">
+            <span class="aggregate-card-icon">ℹ️</span>
+            <div class="aggregate-card-value">${aggregated.INFO || 0}</div>
+            <div class="aggregate-card-label">信息</div>
+          </div>
+          <div class="aggregate-card warning">
+            <span class="aggregate-card-icon">⚠️</span>
+            <div class="aggregate-card-value">${aggregated.WARNING || 0}</div>
+            <div class="aggregate-card-label">警告</div>
+          </div>
+          <div class="aggregate-card error">
+            <span class="aggregate-card-icon">❌</span>
+            <div class="aggregate-card-value">${aggregated.ERROR || 0}</div>
+            <div class="aggregate-card-label">错误</div>
+          </div>
+        `;
+      } else if (groupBy === 'source') {
+        const icons = {
+          'SYSTEM': '🖥️',
+          'HEALTH_CHECK': '🏥',
+          'API': '🔌',
+          'CONSOLE': '💻',
+          'LOG_SYSTEM': '📝',
+          'ALERT': '🚨'
+        };
+        
+        let cardsHtml = `
+          <div class="aggregate-card total">
+            <span class="aggregate-card-icon">📊</span>
+            <div class="aggregate-card-value">${totalLogs}</div>
+            <div class="aggregate-card-label">总日志数</div>
+          </div>
+        `;
+        
+        Object.entries(aggregated).forEach(([source, count]) => {
+          const icon = icons[source] || '📋';
+          cardsHtml += `
+            <div class="aggregate-card">
+              <span class="aggregate-card-icon">${icon}</span>
+              <div class="aggregate-card-value">${count}</div>
+              <div class="aggregate-card-label">${source}</div>
+            </div>
+          `;
+        });
+        
+        cardsContainer.innerHTML = cardsHtml;
+      } else if (groupBy === 'hourly') {
+        // 按小时显示，只渲染图表
+        cardsContainer.innerHTML = `
+          <div class="aggregate-card">
+            <span class="aggregate-card-icon">📈</span>
+            <div class="aggregate-card-value">${totalLogs}</div>
+            <div class="aggregate-card-label">总日志数</div>
+          </div>
+        `;
+      }
+      
+      // 绘制图表
+      drawAggregateChart(aggregated, groupBy);
+    }
+  } catch (err) {
+    console.error('❌ 加载聚合统计失败:', err);
+    const cardsContainer = document.getElementById('aggregateCards');
+    if (cardsContainer) {
+      cardsContainer.innerHTML = `
+        <div style="text-align: center; padding: 40px; color: var(--danger);">
+          <p>加载失败</p>
+          <p style="font-size: 0.85rem; margin-top: 10px;">${err.message}</p>
+        </div>
+      `;
+    }
+  }
+}
+
+/**
+ * 绘制聚合统计图表
+ */
+let aggregateChartInstance = null;
+
+function drawAggregateChart(data, groupBy) {
+  const canvas = document.getElementById('aggregateChart');
+  if (!canvas) return;
+  
+  const ctx = canvas.getContext('2d');
+  
+  // 设置 canvas 尺寸
+  const container = document.getElementById('aggregateChartContainer');
+  if (container) {
+    canvas.width = container.offsetWidth;
+    canvas.height = container.offsetHeight - 40;
+  }
+  
+  // 销毁旧图表
+  if (aggregateChartInstance) {
+    aggregateChartInstance.destroy();
+  }
+  
+  // 准备数据
+  let labels, values, colors;
+  
+  if (groupBy === 'level') {
+    labels = ['成功', '信息', '警告', '错误'];
+    values = [data.SUCCESS || 0, data.INFO || 0, data.WARNING || 0, data.ERROR || 0];
+    colors = ['#00ff88', '#00f5ff', '#fcee0a', '#ff006e'];
+  } else if (groupBy === 'source') {
+    labels = Object.keys(data);
+    values = Object.values(data);
+    colors = labels.map((_, i) => `hsl(${i * 60}, 100%, 50%)`);
+  } else if (groupBy === 'hourly') {
+    labels = Array.from({ length: 24 }, (_, i) => `${i}:00`);
+    values = Array.from({ length: 24 }, (_, i) => data[i] || 0);
+    colors = values.map(v => v > 0 ? '#00f5ff' : 'rgba(0, 245, 255, 0.2)');
+  }
+  
+  // 绘制简单柱状图
+  const padding = 60;
+  const chartWidth = canvas.width - padding * 2;
+  const chartHeight = canvas.height - padding * 2;
+  const maxValue = Math.max(...values, 1);
+  const barWidth = chartWidth / labels.length - 10;
+  
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  // 绘制坐标轴
+  ctx.strokeStyle = 'rgba(0, 245, 255, 0.3)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(padding, padding);
+  ctx.lineTo(padding, canvas.height - padding);
+  ctx.lineTo(canvas.width - padding, canvas.height - padding);
+  ctx.stroke();
+  
+  // 绘制柱状图
+  values.forEach((value, i) => {
+    const x = padding + i * (chartWidth / labels.length) + 5;
+    const barHeight = (value / maxValue) * chartHeight;
+    const y = canvas.height - padding - barHeight;
+    
+    // 绘制柱子
+    const gradient = ctx.createLinearGradient(x, y, x, canvas.height - padding);
+    gradient.addColorStop(0, colors[i]);
+    gradient.addColorStop(1, 'rgba(0, 245, 255, 0.2)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(x, y, barWidth, barHeight);
+    
+    // 绘制标签
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+    ctx.font = '10px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(labels[i], x + barWidth / 2, canvas.height - padding + 15);
+    
+    // 绘制数值
+    if (value > 0) {
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 11px Arial';
+      ctx.fillText(value.toString(), x + barWidth / 2, y - 5);
+    }
+  });
+  
+  // 绘制标题
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 14px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText(groupBy === 'level' ? '日志级别分布' : groupBy === 'source' ? '日志来源分布' : '24 小时日志趋势', canvas.width / 2, 25);
+}
+
+// ===== 日志趋势分析功能 =====
+
+/**
+ * 加载趋势分析数据
+ */
+async function loadTrendAnalysis() {
+  try {
+    const interval = document.getElementById('trendInterval')?.value || '5m';
+    const timeRange = document.getElementById('trendTimeRange')?.value || '1h';
+    const tableBody = document.getElementById('trendTableBody');
+    
+    if (!tableBody) return;
+    
+    const response = await fetch(`/api/logs/trend?interval=${interval}&timeRange=${timeRange}`);
+    const result = await response.json();
+    
+    if (result.success) {
+      const { trend, trendByLevel } = result.data;
+      
+      // 渲染表格
+      if (trend.length === 0) {
+        tableBody.innerHTML = `
+          <tr>
+            <td colspan="6" style="text-align: center; padding: 40px; color: var(--text-muted);">
+              暂无数据
+            </td>
+          </tr>
+        `;
+      } else {
+        tableBody.innerHTML = trend.map((point, i) => {
+          const info = trendByLevel.INFO?.[i]?.count || 0;
+          const success = trendByLevel.SUCCESS?.[i]?.count || 0;
+          const warning = trendByLevel.WARNING?.[i]?.count || 0;
+          const error = trendByLevel.ERROR?.[i]?.count || 0;
+          
+          return `
+            <tr>
+              <td>${point.label}</td>
+              <td style="font-weight: 600; color: var(--neon-cyan);">${point.count}</td>
+              <td style="color: var(--info);">${info}</td>
+              <td style="color: var(--success);">${success}</td>
+              <td style="color: var(--warning);">${warning}</td>
+              <td style="color: var(--danger);">${error}</td>
+            </tr>
+          `;
+        }).join('');
+      }
+      
+      // 绘制趋势图表
+      drawTrendChart(trend, trendByLevel);
+    }
+  } catch (err) {
+    console.error('❌ 加载趋势分析失败:', err);
+    const tableBody = document.getElementById('trendTableBody');
+    if (tableBody) {
+      tableBody.innerHTML = `
+        <tr>
+          <td colspan="6" style="text-align: center; padding: 40px; color: var(--danger);">
+            加载失败：${err.message}
+          </td>
+        </tr>
+      `;
+    }
+  }
+}
+
+/**
+ * 绘制趋势图表
+ */
+let trendChartInstance = null;
+
+function drawTrendChart(trend, trendByLevel) {
+  const canvas = document.getElementById('trendChart');
+  if (!canvas) return;
+  
+  const ctx = canvas.getContext('2d');
+  
+  // 设置 canvas 尺寸
+  const container = document.getElementById('trendChartContainer');
+  if (container) {
+    canvas.width = container.offsetWidth;
+    canvas.height = container.offsetHeight - 40;
+  }
+  
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  if (trend.length === 0) return;
+  
+  const padding = 60;
+  const chartWidth = canvas.width - padding * 2;
+  const chartHeight = canvas.height - padding * 2;
+  const maxValue = Math.max(...trend.map(t => t.count), 1);
+  const pointSpacing = chartWidth / (trend.length - 1 || 1);
+  
+  // 绘制坐标轴
+  ctx.strokeStyle = 'rgba(0, 245, 255, 0.3)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(padding, padding);
+  ctx.lineTo(padding, canvas.height - padding);
+  ctx.lineTo(canvas.width - padding, canvas.height - padding);
+  ctx.stroke();
+  
+  // 绘制趋势线（总数）
+  ctx.strokeStyle = '#00f5ff';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  
+  trend.forEach((point, i) => {
+    const x = padding + i * pointSpacing;
+    const y = canvas.height - padding - (point.count / maxValue) * chartHeight;
+    
+    if (i === 0) {
+      ctx.moveTo(x, y);
+    } else {
+      ctx.lineTo(x, y);
+    }
+  });
+  ctx.stroke();
+  
+  // 绘制数据点
+  trend.forEach((point, i) => {
+    const x = padding + i * pointSpacing;
+    const y = canvas.height - padding - (point.count / maxValue) * chartHeight;
+    
+    ctx.fillStyle = '#00f5ff';
+    ctx.beginPath();
+    ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  
+  // 绘制时间标签
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+  ctx.font = '10px Arial';
+  ctx.textAlign = 'center';
+  const labelStep = Math.ceil(trend.length / 6); // 显示 6 个标签
+  trend.forEach((point, i) => {
+    if (i % labelStep === 0) {
+      const x = padding + i * pointSpacing;
+      ctx.fillText(point.label, x, canvas.height - padding + 15);
+    }
+  });
+  
+  // 绘制图例
+  const legends = [
+    { label: '总数', color: '#00f5ff' },
+    { label: 'INFO', color: '#00f5ff' },
+    { label: 'SUCCESS', color: '#00ff88' },
+    { label: 'WARNING', color: '#fcee0a' },
+    { label: 'ERROR', color: '#ff006e' }
+  ];
+  
+  legends.forEach((legend, i) => {
+    const x = padding + i * 80;
+    ctx.fillStyle = legend.color;
+    ctx.fillRect(x, 10, 15, 3);
+    ctx.fillStyle = '#fff';
+    ctx.font = '11px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText(legend.label, x + 20, 13);
+  });
+}
+
+// ===== 日志搜索功能 =====
+
+/**
+ * 搜索日志
+ */
+async function searchLogs() {
+  try {
+    const keyword = document.getElementById('logSearchKeyword')?.value?.trim();
+    const level = document.getElementById('logSearchLevel')?.value || 'all';
+    const resultsContainer = document.getElementById('searchResultsContainer');
+    const searchStats = document.getElementById('searchStats');
+    const searchTotalCount = document.getElementById('searchTotalCount');
+    
+    if (!resultsContainer) return;
+    
+    if (!keyword) {
+      resultsContainer.innerHTML = `
+        <div class="empty-state">
+          <p>输入关键词开始搜索</p>
+        </div>
+      `;
+      if (searchStats) searchStats.style.display = 'none';
+      return;
+    }
+    
+    // 构建查询参数
+    let url = `/api/logs/search?keyword=${encodeURIComponent(keyword)}`;
+    if (level !== 'all') {
+      url += `&level=${level}`;
+    }
+    
+    const response = await fetch(url);
+    const result = await response.json();
+    
+    if (result.success) {
+      const logs = result.data.logs || [];
+      
+      // 更新统计
+      if (searchTotalCount) searchTotalCount.textContent = result.data.total;
+      if (searchStats) searchStats.style.display = result.data.total > 0 ? 'block' : 'none';
+      
+      // 渲染搜索结果
+      if (logs.length === 0) {
+        resultsContainer.innerHTML = `
+          <div class="empty-state">
+            <p style="font-size: 2rem; margin-bottom: 10px;">🔍</p>
+            <p>未找到匹配的日志</p>
+            <p style="font-size: 0.85rem; margin-top: 10px; color: var(--text-muted);">
+              尝试其他关键词或调整过滤条件
+            </p>
+          </div>
+        `;
+      } else {
+        // 高亮关键词
+        const highlightKeyword = (text) => {
+          const regex = new RegExp(`(${escapeHtml(keyword)})`, 'gi');
+          return text.replace(regex, '<span class="highlight-keyword">$1</span>');
+        };
+        
+        resultsContainer.innerHTML = logs.map(log => {
+          const levelClass = `log-${log.level.toLowerCase()}`;
+          const time = new Date(log.timestamp).toLocaleTimeString('zh-CN');
+          
+          return `
+            <div class="log-entry ${levelClass}">
+              <div class="log-header">
+                <span class="log-timestamp">${time}</span>
+                <div>
+                  <span class="log-level log-level-${log.level.toLowerCase()}">${log.level}</span>
+                  <span class="log-source">${log.source}</span>
+                </div>
+              </div>
+              <div class="log-message">${highlightKeyword(escapeHtml(log.message))}</div>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+  } catch (err) {
+    console.error('❌ 搜索日志失败:', err);
+    const resultsContainer = document.getElementById('searchResultsContainer');
+    if (resultsContainer) {
+      resultsContainer.innerHTML = `
+        <div style="text-align: center; padding: 40px; color: var(--danger);">
+          <p>搜索失败</p>
+          <p style="font-size: 0.85rem; margin-top: 10px;">${err.message}</p>
+        </div>
+      `;
+    }
   }
 }
 

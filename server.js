@@ -1807,6 +1807,252 @@ app.post('/api/logs/clear', (req, res) => {
 });
 
 /**
+ * API: 日志聚合统计
+ * GET /api/logs/aggregate
+ * 支持按级别、来源、时间范围聚合统计
+ */
+app.get('/api/logs/aggregate', (req, res) => {
+  try {
+    const { groupBy = 'level', timeRange = '1h' } = req.query;
+    
+    // 计算时间范围
+    const now = new Date();
+    let startTime;
+    switch (timeRange) {
+      case '1h':
+        startTime = new Date(now.getTime() - 60 * 60 * 1000);
+        break;
+      case '6h':
+        startTime = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+        break;
+      case '24h':
+        startTime = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        break;
+      case '7d':
+        startTime = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      default:
+        startTime = new Date(now.getTime() - 60 * 60 * 1000);
+    }
+    
+    // 过滤时间范围内的日志
+    const filteredLogs = logBuffer.filter(log => new Date(log.timestamp) >= startTime);
+    
+    // 按不同维度聚合
+    let aggregated = {};
+    
+    if (groupBy === 'level') {
+      // 按级别聚合
+      Object.values(LOG_LEVELS).forEach(level => {
+        aggregated[level] = filteredLogs.filter(log => log.level === level).length;
+      });
+    } else if (groupBy === 'source') {
+      // 按来源聚合
+      const sources = [...new Set(filteredLogs.map(log => log.source))];
+      sources.forEach(source => {
+        aggregated[source] = filteredLogs.filter(log => log.source === source).length;
+      });
+    } else if (groupBy === 'hourly') {
+      // 按小时聚合（趋势）
+      const hours = {};
+      filteredLogs.forEach(log => {
+        const hour = new Date(log.timestamp).getHours();
+        hours[hour] = (hours[hour] || 0) + 1;
+      });
+      // 填充 24 小时
+      for (let i = 0; i < 24; i++) {
+        if (!hours[i]) hours[i] = 0;
+      }
+      aggregated = hours;
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        aggregated,
+        groupBy,
+        timeRange,
+        totalLogs: filteredLogs.length,
+        startTime: startTime.toISOString(),
+        endTime: now.toISOString()
+      }
+    });
+  } catch (err) {
+    console.error('❌ 日志聚合统计失败:', err.message);
+    res.status(500).json({
+      success: false,
+      error: '日志聚合统计失败：' + err.message
+    });
+  }
+});
+
+/**
+ * API: 日志趋势分析
+ * GET /api/logs/trend
+ * 返回按时间间隔的日志数量趋势
+ */
+app.get('/api/logs/trend', (req, res) => {
+  try {
+    const { interval = '5m', timeRange = '1h' } = req.query;
+    
+    // 计算时间范围
+    const now = new Date();
+    let startTime;
+    switch (timeRange) {
+      case '1h':
+        startTime = new Date(now.getTime() - 60 * 60 * 1000);
+        break;
+      case '6h':
+        startTime = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+        break;
+      case '24h':
+        startTime = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        break;
+      default:
+        startTime = new Date(now.getTime() - 60 * 60 * 1000);
+    }
+    
+    // 计算时间间隔（毫秒）
+    let intervalMs;
+    switch (interval) {
+      case '1m':
+        intervalMs = 60 * 1000;
+        break;
+      case '5m':
+        intervalMs = 5 * 60 * 1000;
+        break;
+      case '15m':
+        intervalMs = 15 * 60 * 1000;
+        break;
+      case '1h':
+        intervalMs = 60 * 60 * 1000;
+        break;
+      default:
+        intervalMs = 5 * 60 * 1000;
+    }
+    
+    // 过滤时间范围内的日志
+    const filteredLogs = logBuffer.filter(log => new Date(log.timestamp) >= startTime);
+    
+    // 按时间间隔分组统计
+    const trend = [];
+    let currentTime = startTime;
+    
+    while (currentTime < now) {
+      const intervalEnd = new Date(currentTime.getTime() + intervalMs);
+      const count = filteredLogs.filter(log => {
+        const logTime = new Date(log.timestamp);
+        return logTime >= currentTime && logTime < intervalEnd;
+      }).length;
+      
+      trend.push({
+        time: currentTime.toISOString(),
+        count: count,
+        label: currentTime.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+      });
+      
+      currentTime = intervalEnd;
+    }
+    
+    // 按级别统计趋势
+    const trendByLevel = {};
+    Object.values(LOG_LEVELS).forEach(level => {
+      trendByLevel[level] = [];
+      currentTime = startTime;
+      
+      while (currentTime < now) {
+        const intervalEnd = new Date(currentTime.getTime() + intervalMs);
+        const count = filteredLogs.filter(log => {
+          const logTime = new Date(log.timestamp);
+          return logTime >= currentTime && logTime < intervalEnd && log.level === level;
+        }).length;
+        
+        trendByLevel[level].push({
+          time: currentTime.toISOString(),
+          count: count,
+          label: currentTime.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+        });
+        
+        currentTime = intervalEnd;
+      }
+    });
+    
+    res.json({
+      success: true,
+      data: {
+        trend,
+        trendByLevel,
+        interval,
+        timeRange,
+        totalLogs: filteredLogs.length
+      }
+    });
+  } catch (err) {
+    console.error('❌ 日志趋势分析失败:', err.message);
+    res.status(500).json({
+      success: false,
+      error: '日志趋势分析失败：' + err.message
+    });
+  }
+});
+
+/**
+ * API: 日志搜索
+ * GET /api/logs/search?keyword=xxx&level=INFO&limit=50
+ * 支持关键词搜索和高亮
+ */
+app.get('/api/logs/search', (req, res) => {
+  try {
+    const { keyword, level, source, limit = 50 } = req.query;
+    const maxLimit = Math.min(parseInt(limit) || 50, 200);
+    
+    if (!keyword || keyword.trim() === '') {
+      return res.json({
+        success: true,
+        data: {
+          logs: [],
+          total: 0,
+          keyword: ''
+        }
+      });
+    }
+    
+    // 过滤日志
+    let filteredLogs = logBuffer.filter(log => 
+      log.message.toLowerCase().includes(keyword.toLowerCase()) ||
+      log.source.toLowerCase().includes(keyword.toLowerCase())
+    );
+    
+    if (level) {
+      filteredLogs = filteredLogs.filter(log => log.level === level);
+    }
+    
+    if (source) {
+      filteredLogs = filteredLogs.filter(log => log.source === source);
+    }
+    
+    // 返回最近的日志（倒序）
+    const logs = filteredLogs.slice(-maxLimit).reverse();
+    
+    res.json({
+      success: true,
+      data: {
+        logs,
+        total: filteredLogs.length,
+        keyword: keyword,
+        limit: maxLimit
+      }
+    });
+  } catch (err) {
+    console.error('❌ 日志搜索失败:', err.message);
+    res.status(500).json({
+      success: false,
+      error: '日志搜索失败：' + err.message
+    });
+  }
+});
+
+/**
  * 格式化字节数为人类可读格式
  * @param {number} bytes - 字节数
  * @returns {string} 格式化后的字符串

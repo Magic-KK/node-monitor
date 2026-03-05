@@ -440,37 +440,183 @@
         <button id="closeLogsModal" class="modal-close" title="Close">✕</button>
       </div>
       <div class="modal-body">
-        <!-- 日志控制栏 -->
-        <div class="logs-controls">
-          <div class="logs-filters">
-            <select id="logLevelFilter" class="form-select">
-              <option value="all">全部级别</option>
-              <option value="SUCCESS">✅ 成功</option>
-              <option value="INFO">ℹ️ 信息</option>
-              <option value="WARNING">⚠️ 警告</option>
-              <option value="ERROR">❌ 错误</option>
-            </select>
-            <select id="logSourceFilter" class="form-select">
-              <option value="all">全部来源</option>
-              <option value="SYSTEM">系统</option>
-              <option value="HEALTH_CHECK">健康检查</option>
-              <option value="API">API</option>
-              <option value="CONSOLE">控制台</option>
-            </select>
+        <!-- 日志标签页导航 -->
+        <div class="logs-tabs">
+          <button class="logs-tab-btn active" data-tab="stream">📋 实时日志流</button>
+          <button class="logs-tab-btn" data-tab="aggregate">📊 聚合统计</button>
+          <button class="logs-tab-btn" data-tab="trend">📈 趋势分析</button>
+          <button class="logs-tab-btn" data-tab="search">🔍 搜索</button>
+        </div>
+
+        <!-- 实时日志流标签页 -->
+        <div class="logs-tab-content active" id="logsTab-stream">
+          <!-- 日志控制栏 -->
+          <div class="logs-controls">
+            <div class="logs-filters">
+              <select id="logLevelFilter" class="form-select">
+                <option value="all">全部级别</option>
+                <option value="SUCCESS">✅ 成功</option>
+                <option value="INFO">ℹ️ 信息</option>
+                <option value="WARNING">⚠️ 警告</option>
+                <option value="ERROR">❌ 错误</option>
+              </select>
+              <select id="logSourceFilter" class="form-select">
+                <option value="all">全部来源</option>
+                <option value="SYSTEM">系统</option>
+                <option value="HEALTH_CHECK">健康检查</option>
+                <option value="API">API</option>
+                <option value="CONSOLE">控制台</option>
+              </select>
+            </div>
+            <div class="logs-actions">
+              <label class="checkbox-label">
+                <input type="checkbox" id="autoScrollLogs" checked>
+                <span>自动滚动</span>
+              </label>
+              <button id="refreshLogsBtn" class="btn btn-primary">
+                <span class="btn-icon">🔄</span>
+                刷新
+              </button>
+              <button id="clearLogsBtn" class="btn btn-danger">
+                <span class="btn-icon">🗑️</span>
+                清除
+              </button>
+            </div>
           </div>
-          <div class="logs-actions">
-            <label class="checkbox-label">
-              <input type="checkbox" id="autoScrollLogs" checked>
-              <span>自动滚动</span>
-            </label>
-            <button id="refreshLogsBtn" class="btn btn-primary">
-              <span class="btn-icon">🔄</span>
-              刷新
-            </button>
-            <button id="clearLogsBtn" class="btn btn-danger">
-              <span class="btn-icon">🗑️</span>
-              清除
-            </button>
+
+          <!-- 日志列表 -->
+          <div class="logs-container" id="logsContainer">
+            <div class="loading">
+              <div class="spinner"></div>
+              <p>加载日志...</p>
+            </div>
+          </div>
+
+          <!-- 日志统计 -->
+          <div class="logs-stats" id="logsStats">
+            <span>共 <strong id="logTotalCount">0</strong> 条日志 | 缓冲区：<strong id="logBufferSize">0</strong></span>
+          </div>
+        </div>
+
+        <!-- 聚合统计标签页 -->
+        <div class="logs-tab-content" id="logsTab-aggregate">
+          <!-- 聚合控制栏 -->
+          <div class="logs-controls">
+            <div class="logs-filters">
+              <select id="aggregateGroupBy" class="form-select">
+                <option value="level">按级别</option>
+                <option value="source">按来源</option>
+                <option value="hourly">按小时</option>
+              </select>
+              <select id="aggregateTimeRange" class="form-select">
+                <option value="1h">最近 1 小时</option>
+                <option value="6h">最近 6 小时</option>
+                <option value="24h">最近 24 小时</option>
+                <option value="7d">最近 7 天</option>
+              </select>
+            </div>
+            <div class="logs-actions">
+              <button id="refreshAggregateBtn" class="btn btn-primary">
+                <span class="btn-icon">🔄</span>
+                刷新
+              </button>
+            </div>
+          </div>
+
+          <!-- 聚合统计卡片 -->
+          <div class="aggregate-cards" id="aggregateCards">
+            <div class="loading">
+              <div class="spinner"></div>
+              <p>加载统计数据...</p>
+            </div>
+          </div>
+
+          <!-- 聚合图表 -->
+          <div class="aggregate-chart-container" id="aggregateChartContainer">
+            <canvas id="aggregateChart"></canvas>
+          </div>
+        </div>
+
+        <!-- 趋势分析标签页 -->
+        <div class="logs-tab-content" id="logsTab-trend">
+          <!-- 趋势控制栏 -->
+          <div class="logs-controls">
+            <div class="logs-filters">
+              <select id="trendInterval" class="form-select">
+                <option value="5m">每 5 分钟</option>
+                <option value="1m">每 1 分钟</option>
+                <option value="15m">每 15 分钟</option>
+                <option value="1h">每 1 小时</option>
+              </select>
+              <select id="trendTimeRange" class="form-select">
+                <option value="1h">最近 1 小时</option>
+                <option value="6h">最近 6 小时</option>
+                <option value="24h">最近 24 小时</option>
+              </select>
+            </div>
+            <div class="logs-actions">
+              <button id="refreshTrendBtn" class="btn btn-primary">
+                <span class="btn-icon">🔄</span>
+                刷新
+              </button>
+            </div>
+          </div>
+
+          <!-- 趋势图表 -->
+          <div class="trend-chart-container" id="trendChartContainer">
+            <canvas id="trendChart"></canvas>
+          </div>
+
+          <!-- 趋势数据表格 -->
+          <div class="trend-table-container" id="trendTableContainer">
+            <table class="trend-table">
+              <thead>
+                <tr>
+                  <th>时间</th>
+                  <th>总数</th>
+                  <th>INFO</th>
+                  <th>SUCCESS</th>
+                  <th>WARNING</th>
+                  <th>ERROR</th>
+                </tr>
+              </thead>
+              <tbody id="trendTableBody">
+                <!-- 动态生成 -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 搜索标签页 -->
+        <div class="logs-tab-content" id="logsTab-search">
+          <!-- 搜索栏 -->
+          <div class="logs-controls">
+            <div class="logs-search-box">
+              <input type="text" id="logSearchKeyword" class="form-input" placeholder="输入关键词搜索日志...">
+              <select id="logSearchLevel" class="form-select">
+                <option value="all">全部级别</option>
+                <option value="SUCCESS">✅ 成功</option>
+                <option value="INFO">ℹ️ 信息</option>
+                <option value="WARNING">⚠️ 警告</option>
+                <option value="ERROR">❌ 错误</option>
+              </select>
+              <button id="searchLogsBtn" class="btn btn-primary">
+                <span class="btn-icon">🔍</span>
+                搜索
+              </button>
+            </div>
+          </div>
+
+          <!-- 搜索结果 -->
+          <div class="logs-container" id="searchResultsContainer">
+            <div class="empty-state">
+              <p>输入关键词开始搜索</p>
+            </div>
+          </div>
+
+          <!-- 搜索统计 -->
+          <div class="logs-stats" id="searchStats" style="display: none;">
+            <span>找到 <strong id="searchTotalCount">0</strong> 条匹配的日志</span>
           </div>
         </div>
 

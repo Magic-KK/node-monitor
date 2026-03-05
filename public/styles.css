@@ -3183,6 +3183,272 @@ body::after {
   background: rgba(255, 255, 255, 0.5);
 }
 
+/* ===== 日志标签页 ===== */
+.logs-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  border-bottom: 2px solid var(--border-color);
+  padding-bottom: 0;
+}
+
+.logs-tab-btn {
+  padding: 12px 24px;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  bottom: -2px;
+}
+
+.logs-tab-btn:hover {
+  color: var(--neon-cyan);
+  background: rgba(0, 245, 255, 0.05);
+}
+
+.logs-tab-btn.active {
+  color: var(--neon-cyan);
+  border-bottom-color: var(--neon-cyan);
+  background: rgba(0, 245, 255, 0.05);
+}
+
+.logs-tab-content {
+  display: none;
+}
+
+.logs-tab-content.active {
+  display: block;
+  animation: fadeIn 0.3s ease;
+}
+
+/* ===== 聚合统计卡片 ===== */
+.aggregate-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+  padding: 10px;
+}
+
+.aggregate-card {
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: var(--border-radius-lg);
+  padding: 25px 20px;
+  text-align: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.aggregate-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--neon-cyan), var(--neon-purple));
+  opacity: 0.7;
+}
+
+.aggregate-card:hover {
+  transform: translateY(-5px);
+  border-color: var(--neon-cyan);
+  box-shadow: 0 10px 30px rgba(0, 245, 255, 0.2);
+}
+
+.aggregate-card-icon {
+  font-size: 2.5rem;
+  margin-bottom: 10px;
+  display: block;
+}
+
+.aggregate-card-value {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--neon-cyan);
+  text-shadow: 0 0 10px rgba(0, 245, 255, 0.5);
+  margin: 10px 0;
+}
+
+.aggregate-card-label {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.aggregate-card.total::before {
+  background: linear-gradient(90deg, var(--neon-purple), var(--neon-pink));
+}
+
+.aggregate-card.total .aggregate-card-value {
+  color: var(--neon-purple);
+  text-shadow: 0 0 10px rgba(157, 0, 255, 0.5);
+}
+
+.aggregate-card.success::before {
+  background: linear-gradient(90deg, var(--success), var(--neon-cyan));
+}
+
+.aggregate-card.success .aggregate-card-value {
+  color: var(--success);
+  text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+}
+
+.aggregate-card.warning::before {
+  background: linear-gradient(90deg, var(--warning), var(--neon-orange));
+}
+
+.aggregate-card.warning .aggregate-card-value {
+  color: var(--warning);
+  text-shadow: 0 0 10px rgba(252, 238, 10, 0.5);
+}
+
+.aggregate-card.error::before {
+  background: linear-gradient(90deg, var(--danger), var(--neon-red));
+}
+
+.aggregate-card.error .aggregate-card-value {
+  color: var(--danger);
+  text-shadow: 0 0 10px rgba(255, 0, 110, 0.5);
+}
+
+/* ===== 聚合图表 ===== */
+.aggregate-chart-container {
+  background: var(--bg-dark);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-lg);
+  padding: 20px;
+  height: 400px;
+  position: relative;
+}
+
+/* ===== 趋势图表 ===== */
+.trend-chart-container {
+  background: var(--bg-dark);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-lg);
+  padding: 20px;
+  height: 400px;
+  margin-bottom: 30px;
+  position: relative;
+}
+
+/* ===== 趋势表格 ===== */
+.trend-table-container {
+  background: var(--bg-dark);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-lg);
+  overflow: hidden;
+}
+
+.trend-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.trend-table thead {
+  background: rgba(0, 245, 255, 0.1);
+  border-bottom: 2px solid var(--neon-cyan);
+}
+
+.trend-table th {
+  padding: 15px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--neon-cyan);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 0.8rem;
+}
+
+.trend-table td {
+  padding: 12px 15px;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.trend-table tbody tr {
+  transition: all 0.3s ease;
+}
+
+.trend-table tbody tr:hover {
+  background: rgba(0, 245, 255, 0.05);
+}
+
+.trend-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* ===== 搜索框 ===== */
+.logs-search-box {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  width: 100%;
+}
+
+.logs-search-box .form-input {
+  flex: 1;
+  min-width: 300px;
+}
+
+.logs-search-box .form-select {
+  min-width: 140px;
+}
+
+/* 高亮搜索关键词 */
+.highlight-keyword {
+  background: rgba(252, 238, 10, 0.3);
+  color: var(--warning);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-weight: 600;
+}
+
+/* 搜索结果空状态 */
+#searchResultsContainer .empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-muted);
+  font-size: 1rem;
+}
+
+/* 亮色模式适配 */
+[data-theme="light"] .logs-tabs {
+  border-bottom-color: #e0e0e0;
+}
+
+[data-theme="light"] .logs-tab-btn:hover {
+  background: rgba(0, 139, 163, 0.05);
+}
+
+[data-theme="light"] .logs-tab-btn.active {
+  background: rgba(0, 139, 163, 0.05);
+}
+
+[data-theme="light"] .aggregate-card {
+  background: #ffffff;
+}
+
+[data-theme="light"] .aggregate-chart-container,
+[data-theme="light"] .trend-chart-container,
+[data-theme="light"] .trend-table-container {
+  background: #ffffff;
+}
+
+[data-theme="light"] .trend-table thead {
+  background: rgba(0, 139, 163, 0.1);
+}
+
 /* ===== 快速操作 ===== */
 .quick-actions-grid {
   display: grid;
