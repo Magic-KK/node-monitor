@@ -5,6 +5,30 @@
  * @author 牛开发 🐮💻
  */
 
+// ===== 粒子背景系统 =====
+let particleCanvas = null;
+let particleCtx = null;
+let particles = [];
+let particleAnimationId = null;
+
+// 粒子配置
+const PARTICLE_CONFIG = {
+  count: 80, // 粒子数量
+  minSize: 1, // 最小粒子大小
+  maxSize: 3, // 最大粒子大小
+  minSpeed: 0.2, // 最小速度
+  maxSpeed: 0.8, // 最大速度
+  connectionDistance: 150, // 连线距离
+  mouseDistance: 200, // 鼠标互动距离
+  colors: {
+    dark: ['rgba(0, 245, 255, 0.5)', 'rgba(185, 38, 255, 0.5)', 'rgba(0, 102, 255, 0.5)'],
+    light: ['rgba(0, 139, 163, 0.4)', 'rgba(139, 38, 217, 0.4)', 'rgba(0, 82, 204, 0.4)']
+  }
+};
+
+// 鼠标位置
+let mouse = { x: null, y: null };
+
 // 全局状态
 let config = null;
 let autoRefreshInterval = null;
@@ -32,6 +56,9 @@ const clearSearchBtn = document.getElementById('clearSearchBtn');
 async function init() {
   console.log('🚀 SYSTEM INITIALIZING...');
   console.log('🤖 J.A.R.V.I.S. NODE MONITOR - CYBERPUNK EDITION');
+  
+  // 初始化粒子背景
+  initParticles();
   
   // 初始化主题
   initTheme();
@@ -83,6 +110,10 @@ function toggleTheme() {
   const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
   const newTheme = currentTheme === 'light' ? 'dark' : 'light';
   setTheme(newTheme);
+  
+  // 更新粒子颜色
+  updateParticleColors();
+  
   showNotification(`THEME SWITCHED TO ${newTheme.toUpperCase()} MODE`);
   console.log('🎨 THEME TOGGLED:', newTheme);
 }
@@ -517,6 +548,197 @@ function requestNotificationPermission() {
       console.log('🔔 Notification permission:', permission);
     });
   }
+}
+
+// ===== 粒子背景系统函数 =====
+
+/**
+ * 初始化粒子系统
+ */
+function initParticles() {
+  particleCanvas = document.getElementById('particleCanvas');
+  if (!particleCanvas) return;
+  
+  particleCtx = particleCanvas.getContext('2d');
+  
+  // 设置画布尺寸
+  resizeCanvas();
+  
+  // 创建粒子
+  createParticles();
+  
+  // 绑定事件
+  window.addEventListener('resize', resizeCanvas);
+  window.addEventListener('mousemove', handleMouseMove);
+  window.addEventListener('mouseout', () => {
+    mouse.x = null;
+    mouse.y = null;
+  });
+  
+  // 启动动画
+  animateParticles();
+  
+  console.log('✨ PARTICLE SYSTEM INITIALIZED');
+}
+
+/**
+ * 调整画布尺寸
+ */
+function resizeCanvas() {
+  if (!particleCanvas) return;
+  
+  particleCanvas.width = window.innerWidth;
+  particleCanvas.height = window.innerHeight;
+}
+
+/**
+ * 创建粒子
+ */
+function createParticles() {
+  particles = [];
+  const isLightTheme = document.documentElement.getAttribute('data-theme') === 'light';
+  const colors = isLightTheme ? PARTICLE_CONFIG.colors.light : PARTICLE_CONFIG.colors.dark;
+  
+  for (let i = 0; i < PARTICLE_CONFIG.count; i++) {
+    particles.push({
+      x: Math.random() * particleCanvas.width,
+      y: Math.random() * particleCanvas.height,
+      size: Math.random() * (PARTICLE_CONFIG.maxSize - PARTICLE_CONFIG.minSize) + PARTICLE_CONFIG.minSize,
+      speedX: (Math.random() - 0.5) * (Math.random() < 0.5 ? PARTICLE_CONFIG.minSpeed : PARTICLE_CONFIG.maxSpeed),
+      speedY: (Math.random() - 0.5) * (Math.random() < 0.5 ? PARTICLE_CONFIG.minSpeed : PARTICLE_CONFIG.maxSpeed),
+      color: colors[Math.floor(Math.random() * colors.length)],
+      opacity: Math.random() * 0.5 + 0.3
+    });
+  }
+}
+
+/**
+ * 处理鼠标移动
+ * @param {MouseEvent} e - 鼠标事件
+ */
+function handleMouseMove(e) {
+  mouse.x = e.clientX;
+  mouse.y = e.clientY;
+}
+
+/**
+ * 更新粒子位置
+ */
+function updateParticles() {
+  const isLightTheme = document.documentElement.getAttribute('data-theme') === 'light';
+  const colors = isLightTheme ? PARTICLE_CONFIG.colors.light : PARTICLE_CONFIG.colors.dark;
+  
+  particles.forEach(particle => {
+    // 更新位置
+    particle.x += particle.speedX;
+    particle.y += particle.speedY;
+    
+    // 边界检测（反弹）
+    if (particle.x < 0 || particle.x > particleCanvas.width) {
+      particle.speedX *= -1;
+    }
+    if (particle.y < 0 || particle.y > particleCanvas.height) {
+      particle.speedY *= -1;
+    }
+    
+    // 鼠标互动（排斥效果）
+    if (mouse.x !== null && mouse.y !== null) {
+      const dx = mouse.x - particle.x;
+      const dy = mouse.y - particle.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      if (distance < PARTICLE_CONFIG.mouseDistance) {
+        const force = (PARTICLE_CONFIG.mouseDistance - distance) / PARTICLE_CONFIG.mouseDistance;
+        const angle = Math.atan2(dy, dx);
+        const pushX = Math.cos(angle) * force * 2;
+        const pushY = Math.sin(angle) * force * 2;
+        
+        particle.x -= pushX;
+        particle.y -= pushY;
+      }
+    }
+  });
+}
+
+/**
+ * 绘制粒子
+ */
+function drawParticles() {
+  if (!particleCtx) return;
+  
+  // 清空画布
+  particleCtx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
+  
+  // 绘制粒子连线
+  drawConnections();
+  
+  // 绘制粒子
+  particles.forEach(particle => {
+    particleCtx.beginPath();
+    particleCtx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+    particleCtx.fillStyle = particle.color;
+    particleCtx.globalAlpha = particle.opacity;
+    particleCtx.fill();
+    
+    // 添加辉光效果
+    particleCtx.shadowBlur = 15;
+    particleCtx.shadowColor = particle.color;
+  });
+  
+  particleCtx.globalAlpha = 1;
+  particleCtx.shadowBlur = 0;
+}
+
+/**
+ * 绘制粒子之间的连线
+ */
+function drawConnections() {
+  const isLightTheme = document.documentElement.getAttribute('data-theme') === 'light';
+  
+  for (let i = 0; i < particles.length; i++) {
+    for (let j = i + 1; j < particles.length; j++) {
+      const dx = particles[i].x - particles[j].x;
+      const dy = particles[i].y - particles[j].y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      if (distance < PARTICLE_CONFIG.connectionDistance) {
+        const opacity = (1 - distance / PARTICLE_CONFIG.connectionDistance) * 0.5;
+        
+        particleCtx.beginPath();
+        particleCtx.strokeStyle = isLightTheme 
+          ? `rgba(0, 139, 163, ${opacity})`
+          : `rgba(0, 245, 255, ${opacity})`;
+        particleCtx.lineWidth = 0.5;
+        particleCtx.globalAlpha = opacity;
+        particleCtx.moveTo(particles[i].x, particles[i].y);
+        particleCtx.lineTo(particles[j].x, particles[j].y);
+        particleCtx.stroke();
+      }
+    }
+  }
+  
+  particleCtx.globalAlpha = 1;
+}
+
+/**
+ * 粒子动画循环
+ */
+function animateParticles() {
+  updateParticles();
+  drawParticles();
+  particleAnimationId = requestAnimationFrame(animateParticles);
+}
+
+/**
+ * 根据主题更新粒子颜色
+ */
+function updateParticleColors() {
+  const isLightTheme = document.documentElement.getAttribute('data-theme') === 'light';
+  const colors = isLightTheme ? PARTICLE_CONFIG.colors.light : PARTICLE_CONFIG.colors.dark;
+  
+  particles.forEach((particle, index) => {
+    particle.color = colors[index % colors.length];
+  });
 }
 
 // 页面加载完成后初始化
