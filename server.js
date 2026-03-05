@@ -2539,7 +2539,8 @@ app.post('/api/settings', (req, res) => {
     // 如果检查间隔改变，热更新：重启调度器
     if (newSettings.checkInterval !== undefined) {
       restartHealthCheckScheduler();
-      logConfigChange('check_interval', `检查间隔更新：${oldVal / 1000}s → ${teamConfig.checkInterval / 1000}s`, changes);
+      const oldInterval = changes.checkInterval ? changes.checkInterval.old : teamConfig.checkInterval;
+      logConfigChange('check_interval', `检查间隔更新：${oldInterval / 1000}s → ${teamConfig.checkInterval / 1000}s`, changes);
     } else if (Object.keys(changes).length > 0) {
       logConfigChange('settings', '配置设置已更新', changes);
     }

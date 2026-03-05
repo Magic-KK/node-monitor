@@ -39,6 +39,6 @@
       "note": "需要配置飞书 appId 才能启用"
     }
   ],
-  "checkInterval": 30000,
+  "checkInterval": 60000,
   "timeout": 5000
 }
