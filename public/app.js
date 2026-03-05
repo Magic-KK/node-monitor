@@ -46,6 +46,7 @@ const healthCheckBtn = document.getElementById('healthCheckBtn');
 const autoRefreshToggle = document.getElementById('autoRefresh');
 const refreshIntervalSelect = document.getElementById('refreshInterval');
 const themeSelect = document.getElementById('themeSelect');
+const fontSizeSelect = document.getElementById('fontSizeSelect');
 const lastUpdateEl = document.getElementById('lastUpdate');
 const totalNodesEl = document.getElementById('totalNodes');
 const onlineNodesEl = document.getElementById('onlineNodes');
@@ -673,6 +674,39 @@ function setTheme(theme) {
 }
 
 /**
+ * 应用字体大小
+ * @param {string} fontSize - 字体大小倍率 (0.875, 1, 1.125, 1.25)
+ */
+function applyFontSize(fontSize) {
+  const root = document.documentElement;
+  const baseFontSize = 16; // 基础字体大小 (px)
+  const newFontSize = baseFontSize * parseFloat(fontSize);
+  
+  // 设置 CSS 变量
+  root.style.setProperty('--font-size-base', `${newFontSize}px`);
+  
+  // 更新 body 的 font-size
+  document.body.style.fontSize = `${newFontSize}px`;
+  
+  console.log('🔤 FONT SIZE SET TO:', fontSize, `(${newFontSize}px)`);
+}
+
+/**
+ * 获取字体大小标签
+ * @param {string} fontSize - 字体大小倍率
+ * @returns {string} 字体大小标签
+ */
+function getFontSizeLabel(fontSize) {
+  const labels = {
+    '0.875': '小 (Small)',
+    '1': '标准 (Standard)',
+    '1.125': '大 (Large)',
+    '1.25': '超大 (Extra Large)'
+  };
+  return labels[fontSize] || '标准 (Standard)';
+}
+
+/**
  * 加载团队配置
  */
 async function loadConfig() {
@@ -1271,6 +1305,22 @@ function bindEvents() {
       }
       // 保存到 localStorage
       localStorage.setItem('soundEnabled', soundEnabled);
+    });
+  }
+  
+  // 字体大小选择器
+  if (fontSizeSelect) {
+    // 加载保存的字体大小
+    const savedFontSize = localStorage.getItem('fontSize') || '1';
+    fontSizeSelect.value = savedFontSize;
+    applyFontSize(savedFontSize);
+    
+    fontSizeSelect.addEventListener('change', (e) => {
+      const fontSize = e.target.value;
+      applyFontSize(fontSize);
+      // 保存到 localStorage
+      localStorage.setItem('fontSize', fontSize);
+      showNotification(`FONT SIZE: ${getFontSizeLabel(fontSize)}`);
     });
   }
   
