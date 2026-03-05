@@ -906,6 +906,37 @@ body::after {
   text-shadow: 0 0 10px rgba(0, 245, 255, 0.3);
 }
 
+/* WebSocket 状态指示器 */
+.ws-status {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  margin-left: 15px;
+  font-family: 'Courier New', monospace;
+  padding: 4px 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  border: 1px solid rgba(255, 0, 110, 0.3);
+  text-shadow: 0 0 10px rgba(255, 0, 110, 0.3);
+  transition: all 0.3s ease;
+  cursor: default;
+}
+
+.ws-status:hover {
+  border-color: rgba(255, 0, 110, 0.6);
+  box-shadow: 0 0 15px rgba(255, 0, 110, 0.3);
+}
+
+/* 当 WebSocket 连接时 */
+.ws-status.connected {
+  color: var(--neon-green);
+  border-color: rgba(0, 255, 136, 0.5);
+  text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+}
+
+.ws-status.connected:hover {
+  box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
+}
+
 /* 主题切换按钮 */
 .theme-toggle {
   display: flex;

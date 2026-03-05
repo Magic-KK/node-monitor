@@ -99,6 +99,252 @@ const SOUND_CONFIG = {
   }
 };
 
+// ===== WebSocket 实时推送系统 =====
+let ws = null; // WebSocket 连接
+let wsReconnectTimer = null; // 重连定时器
+let wsReconnectAttempts = 0; // 重连次数
+const WS_MAX_RECONNECT_ATTEMPTS = 5; // 最大重连次数
+const WS_RECONNECT_DELAY = 3000; // 重连延迟（毫秒）
+
+// WebSocket 状态指示器
+let wsConnected = false;
+
+/**
+ * 初始化 WebSocket 连接
+ */
+function initWebSocket() {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = `${protocol}//${window.location.host}/ws`;
+  
+  console.log('🔌 尝试连接 WebSocket:', wsUrl);
+  
+  try {
+    ws = new WebSocket(wsUrl);
+    
+    // 连接成功
+    ws.onopen = () => {
+      console.log('✅ WebSocket 连接成功');
+      wsConnected = true;
+      wsReconnectAttempts = 0;
+      updateWebSocketStatus(true);
+      
+      // 播放连接成功音效
+      if (soundEnabled) {
+        playSound('success');
+      }
+    };
+    
+    // 接收消息
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        handleWebSocketMessage(data);
+      } catch (err) {
+        console.error('❌ 解析 WebSocket 消息失败:', err);
+      }
+    };
+    
+    // 连接关闭
+    ws.onclose = () => {
+      console.log('🔌 WebSocket 连接已关闭');
+      wsConnected = false;
+      updateWebSocketStatus(false);
+      
+      // 尝试重连
+      scheduleReconnect();
+    };
+    
+    // 连接错误
+    ws.onerror = (error) => {
+      console.error('❌ WebSocket 错误:', error);
+      wsConnected = false;
+      updateWebSocketStatus(false);
+    };
+  } catch (err) {
+    console.error('❌ 创建 WebSocket 连接失败:', err);
+    scheduleReconnect();
+  }
+}
+
+/**
+ * 处理 WebSocket 消息
+ * @param {Object} data - 消息数据
+ */
+function handleWebSocketMessage(data) {
+  console.log('📨 收到 WebSocket 消息:', data.type);
+  
+  switch (data.type) {
+    case 'connected':
+      console.log('👋 服务器欢迎:', data.message);
+      break;
+      
+    case 'initial_state':
+      // 初始状态已加载，无需额外处理
+      console.log('📊 收到初始状态');
+      break;
+      
+    case 'state_update':
+      // 节点状态更新
+      handleStateUpdate(data.data);
+      break;
+      
+    case 'metrics_update':
+      // 系统指标更新
+      handleMetricsUpdate(data.data);
+      break;
+      
+    case 'pong':
+      // 心跳响应
+      console.log('🏓 WebSocket 心跳响应');
+      break;
+  }
+}
+
+/**
+ * 处理状态更新
+ * @param {Object} data - 状态数据
+ */
+function handleStateUpdate(data) {
+  if (!data || !data.nodes) return;
+  
+  console.log('📊 实时更新节点状态:', data.nodes.length, '节点');
+  
+  // 更新缓存
+  currentNodes = data.nodes;
+  
+  // 更新 UI（只刷新卡片，不重新渲染整个页面）
+  updateNodesGrid(currentNodes);
+  
+  // 更新统计
+  updateStats(currentNodes);
+  
+  // 更新连线图
+  drawConnections();
+  
+  // 更新最后更新时间
+  if (data.timestamp) {
+    lastUpdateEl.textContent = new Date(data.timestamp).toLocaleTimeString('zh-CN');
+  }
+}
+
+/**
+ * 处理系统指标更新
+ * @param {Object} data - 指标数据
+ */
+function handleMetricsUpdate(data) {
+  if (!data) return;
+  
+  // 更新 CPU 使用率
+  if (data.cpu !== undefined && cpuUsageEl) {
+    cpuUsageEl.textContent = data.cpu.toFixed(1);
+    const cpuPercent = Math.min(100, data.cpu);
+    cpuBarEl.style.width = cpuPercent + '%';
+    
+    // 根据使用率设置颜色
+    cpuBarEl.style.background = getMetricBarColor(cpuPercent);
+  }
+  
+  // 更新内存使用率
+  if (data.memory && data.memory.percent !== undefined && memoryUsageEl) {
+    memoryUsageEl.textContent = data.memory.percent.toFixed(1);
+    const memoryPercent = Math.min(100, data.memory.percent);
+    memoryBarEl.style.width = memoryPercent + '%';
+    memoryBarEl.style.background = getMetricBarColor(memoryPercent);
+    
+    // 更新内存详情
+    if (memoryDetailEl && data.memory.usedFormatted && data.memory.totalFormatted) {
+      memoryDetailEl.textContent = `${data.memory.usedFormatted} / ${data.memory.totalFormatted}`;
+    }
+  }
+  
+  // 更新运行时间
+  if (data.uptimeFormatted && uptimeEl) {
+    uptimeEl.textContent = data.uptimeFormatted;
+  }
+  
+  // 更新平台信息
+  if (data.platform && platformDetailEl) {
+    platformDetailEl.textContent = `${data.platform} (${data.arch})`;
+  }
+  
+  // 更新最后更新时间
+  if (data.timestamp && metricsLastUpdateEl) {
+    metricsLastUpdateEl.textContent = new Date(data.timestamp).toLocaleTimeString('zh-CN');
+  }
+}
+
+/**
+ * 更新 WebSocket 状态指示器
+ * @param {boolean} connected - 是否已连接
+ */
+function updateWebSocketStatus(connected) {
+  const wsIndicator = document.getElementById('wsStatus');
+  if (wsIndicator) {
+    wsIndicator.textContent = connected ? '🟢 WS' : '🔴 WS';
+    wsIndicator.title = connected ? 'WebSocket 已连接' : 'WebSocket 未连接';
+    
+    // 添加/移除连接状态类
+    if (connected) {
+      wsIndicator.classList.add('connected');
+    } else {
+      wsIndicator.classList.remove('connected');
+    }
+  }
+}
+
+/**
+ * 安排重连
+ */
+function scheduleReconnect() {
+  if (wsReconnectAttempts >= WS_MAX_RECONNECT_ATTEMPTS) {
+    console.log('❌ WebSocket 重连次数已达上限，停止重连');
+    return;
+  }
+  
+  wsReconnectAttempts++;
+  const delay = WS_RECONNECT_DELAY * wsReconnectAttempts; // 指数退避
+  
+  console.log(`⏰ ${delay / 1000}秒后尝试第${wsReconnectAttempts}次重连...`);
+  
+  wsReconnectTimer = setTimeout(() => {
+    console.log('🔄 尝试重新连接 WebSocket...');
+    initWebSocket();
+  }, delay);
+}
+
+/**
+ * 发送 WebSocket 消息
+ * @param {Object} data - 要发送的数据
+ */
+function sendWebSocketMessage(data) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(data));
+    return true;
+  }
+  return false;
+}
+
+/**
+ * 请求实时状态更新
+ */
+function requestStateUpdate() {
+  return sendWebSocketMessage({ type: 'request_state' });
+}
+
+/**
+ * 请求系统指标更新
+ */
+function requestMetricsUpdate() {
+  return sendWebSocketMessage({ type: 'request_metrics' });
+}
+
+/**
+ * 发送心跳
+ */
+function sendWebSocketPing() {
+  return sendWebSocketMessage({ type: 'ping' });
+}
+
 /**
  * 初始化应用
  */
@@ -142,6 +388,9 @@ async function init() {
   
   // 启动自动刷新
   startAutoRefresh();
+  
+  // 初始化 WebSocket 实时推送
+  initWebSocket();
   
   // 隐藏加载动画
   updateLoadingProgress(100, 'SYSTEM ONLINE');

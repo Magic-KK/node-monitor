@@ -16,9 +16,126 @@ const path = require('path');
 const fs = require('fs');
 const http = require('http');
 const os = require('os');
+const WebSocket = require('ws');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// ===== WebSocket 实时推送系统 =====
+// 创建 HTTP 服务器
+const server = http.createServer(app);
+
+// 创建 WebSocket 服务器
+const wss = new WebSocket.Server({ server, path: '/ws' });
+
+// 客户端连接集合
+const clients = new Set();
+
+/**
+ * 广播消息给所有连接的客户端
+ * @param {Object} data - 要发送的数据对象
+ */
+function broadcast(data) {
+  const message = JSON.stringify(data);
+  clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(message);
+    }
+  });
+}
+
+/**
+ * 发送消息给单个客户端
+ * @param {WebSocket} client - 客户端连接
+ * @param {Object} data - 要发送的数据对象
+ */
+function sendToClient(client, data) {
+  if (client.readyState === WebSocket.OPEN) {
+    client.send(JSON.stringify(data));
+  }
+}
+
+// WebSocket 连接处理
+wss.on('connection', (ws, req) => {
+  const clientId = req.socket.remoteAddress + ':' + req.socket.remotePort;
+  console.log(`🔌 WebSocket 客户端已连接：${clientId}`);
+  
+  // 添加到客户端集合
+  clients.add(ws);
+  
+  // 发送欢迎消息和当前状态
+  sendToClient(ws, {
+    type: 'connected',
+    clientId: clientId,
+    timestamp: new Date().toISOString(),
+    message: '欢迎连接到 Node Monitor WebSocket'
+  });
+  
+  // 发送当前节点状态
+  const statuses = Array.from(nodeStatusCache.values());
+  sendToClient(ws, {
+    type: 'initial_state',
+    data: {
+      nodes: statuses,
+      timestamp: new Date().toISOString()
+    }
+  });
+  
+  // 处理客户端消息
+  ws.on('message', (message) => {
+    try {
+      const data = JSON.parse(message);
+      console.log(`📨 收到客户端消息：${clientId}`, data);
+      
+      // 处理不同类型的客户端请求
+      switch (data.type) {
+        case 'ping':
+          sendToClient(ws, {
+            type: 'pong',
+            timestamp: new Date().toISOString()
+          });
+          break;
+        case 'request_state':
+          // 立即返回当前状态
+          const currentStatuses = Array.from(nodeStatusCache.values());
+          sendToClient(ws, {
+            type: 'state_update',
+            data: {
+              nodes: currentStatuses,
+              timestamp: new Date().toISOString()
+            }
+          });
+          break;
+        case 'request_metrics':
+          // 返回系统指标
+          sendToClient(ws, {
+            type: 'metrics_update',
+            data: {
+              ...systemMetricsCache,
+              timestamp: new Date().toISOString()
+            }
+          });
+          break;
+      }
+    } catch (err) {
+      console.warn('⚠️ 解析客户端消息失败:', err.message);
+    }
+  });
+  
+  // 处理断开连接
+  ws.on('close', () => {
+    console.log(`🔌 WebSocket 客户端已断开：${clientId}`);
+    clients.delete(ws);
+  });
+  
+  // 处理错误
+  ws.on('error', (err) => {
+    console.error(`❌ WebSocket 错误 (${clientId}):`, err.message);
+    clients.delete(ws);
+  });
+});
+
+console.log('🌐 WebSocket 服务器已启动：ws://localhost:' + PORT + '/ws');
 
 // 加载 OpenClaw 配置（真实配置源）
 // 尝试多个可能的位置
@@ -793,6 +910,36 @@ async function checkAllNodes() {
   const nodes = buildRealNodeList();
   const checks = nodes.map(node => checkNodeHealth(node));
   return Promise.all(checks);
+}
+
+/**
+ * 广播节点状态更新给所有 WebSocket 客户端
+ * @param {Array} statuses - 节点状态数组
+ */
+function broadcastStatusUpdate(statuses) {
+  const onlineCount = statuses.filter(s => s.online).length;
+  const configuredCount = statuses.filter(s => s.configured).length;
+  
+  // 广播状态更新
+  broadcast({
+    type: 'state_update',
+    data: {
+      nodes: statuses,
+      totalNodes: statuses.length,
+      onlineCount: onlineCount,
+      configuredCount: configuredCount,
+      timestamp: new Date().toISOString()
+    }
+  });
+  
+  // 同时广播系统指标
+  broadcast({
+    type: 'metrics_update',
+    data: {
+      ...systemMetricsCache,
+      timestamp: new Date().toISOString()
+    }
+  });
 }
 
 // 中间件 - 解析 JSON
@@ -1713,6 +1860,8 @@ function startHealthCheckScheduler() {
     console.log(`✅ 初始健康检查完成：${onlineCount}/${configuredCount} 节点在线（共 ${statuses.length} 个 agent）`);
     // 保存初始快照
     saveHistorySnapshot(statuses);
+    // 广播状态更新给 WebSocket 客户端
+    broadcastStatusUpdate(statuses);
     // 初始化时不触发告警（避免启动时大量告警）
   });
   
@@ -1724,6 +1873,8 @@ function startHealthCheckScheduler() {
       console.log(`📊 健康检查：${onlineCount}/${configuredCount} 节点在线`);
       // 保存历史快照
       saveHistorySnapshot(statuses);
+      // 广播状态更新给 WebSocket 客户端
+      broadcastStatusUpdate(statuses);
       // 检查是否需要发送告警
       checkAlerts(statuses);
     });
@@ -1731,7 +1882,7 @@ function startHealthCheckScheduler() {
 }
 
 // 启动服务器
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log('');
   console.log('╔════════════════════════════════════════════════════════╗');
   console.log('║     🚀 Node Monitor Server 已启动                      ║');
@@ -1739,6 +1890,7 @@ app.listen(PORT, () => {
   console.log('╠════════════════════════════════════════════════════════╣');
   console.log(`║     🌐 本地访问：http://localhost:${PORT}                ║`);
   console.log(`║     📡 API: http://localhost:${PORT}/api/status         ║`);
+  console.log(`║     🔌 WebSocket: ws://localhost:${PORT}/ws             ║`);
   console.log(`║     📋 配置源：openclaw.json                            ║`);
   console.log('╚════════════════════════════════════════════════════════╝');
   console.log('');
