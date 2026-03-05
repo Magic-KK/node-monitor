@@ -475,6 +475,65 @@ app.get('/api/system-metrics', (req, res) => {
 });
 
 /**
+ * API: 导出节点状态报告（CSV 格式）
+ * GET /api/export/csv
+ * 
+ * 生成包含所有节点当前状态的 CSV 文件
+ * 字段：ID, 名称，角色，状态，响应时间，最后检查，工作空间，描述
+ */
+app.get('/api/export/csv', async (req, res) => {
+  try {
+    // 获取最新节点状态
+    const statuses = await checkAllNodes();
+    
+    // CSV 表头
+    const headers = ['ID', 'Name', 'Role', 'Status', 'Response Time (ms)', 'Last Check', 'Workspace', 'Description'];
+    
+    // CSV 数据行
+    const rows = statuses.map(node => {
+      const status = node.online ? 'Online' : 'Offline';
+      const responseTime = node.responseTime !== null ? node.responseTime.toString() : 'N/A';
+      const lastCheck = node.lastCheck ? new Date(node.lastCheck).toISOString() : 'N/A';
+      const workspace = node.workspace || 'N/A';
+      const description = (node.description || '').replace(/"/g, '""'); // 转义引号
+      
+      return [
+        `"${node.id || 'N/A'}"`,
+        `"${node.name || 'N/A'}"`,
+        `"${node.role || 'N/A'}"`,
+        `"${status}"`,
+        `"${responseTime}"`,
+        `"${lastCheck}"`,
+        `"${workspace}"`,
+        `"${description}"`
+      ].join(',');
+    });
+    
+    // 组合完整 CSV 内容
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    
+    // 生成文件名（带时间戳）
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+    const filename = `node-monitor-report-${timestamp}.csv`;
+    
+    // 设置响应头，触发浏览器下载
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    
+    // 发送 CSV 内容
+    res.send(csvContent);
+    
+    console.log(`📊 导出报告：${filename} (${statuses.length} 节点)`);
+  } catch (err) {
+    console.error('❌ 导出 CSV 失败:', err.message);
+    res.status(500).json({
+      success: false,
+      error: '导出失败：' + err.message
+    });
+  }
+});
+
+/**
  * API: 获取配置设置
  * GET /api/settings
  */

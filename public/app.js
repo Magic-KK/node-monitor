@@ -705,6 +705,12 @@ function bindEvents() {
   // 健康检查按钮
   healthCheckBtn.addEventListener('click', runHealthCheck);
   
+  // 导出报告按钮
+  const exportBtn = document.getElementById('exportBtn');
+  if (exportBtn) {
+    exportBtn.addEventListener('click', exportToCSV);
+  }
+  
   // 自动刷新开关
   autoRefreshToggle.addEventListener('change', () => {
     if (autoRefreshToggle.checked) {
@@ -2064,6 +2070,73 @@ function showSettingsMessage(message, type = 'info') {
 function hideSettingsMessage() {
   if (settingsMessage) {
     settingsMessage.style.display = 'none';
+  }
+}
+
+/**
+ * 导出节点状态报告为 CSV 文件
+ * 调用后端 API 生成并下载 CSV 文件
+ */
+async function exportToCSV() {
+  const exportBtn = document.getElementById('exportBtn');
+  if (!exportBtn) return;
+  
+  try {
+    // 显示加载状态
+    const originalText = exportBtn.innerHTML;
+    exportBtn.innerHTML = '<span class="btn-icon">⏳</span> 导出中...';
+    exportBtn.disabled = true;
+    
+    // 调用导出 API
+    const response = await fetch('/api/export/csv');
+    
+    if (!response.ok) {
+      throw new Error('导出失败：' + response.statusText);
+    }
+    
+    // 获取文件名（从 Content-Disposition 头）
+    const contentDisposition = response.headers.get('Content-Disposition');
+    let filename = 'node-monitor-report.csv';
+    if (contentDisposition) {
+      const match = contentDisposition.match(/filename="?(.+)"?$/i);
+      if (match && match[1]) {
+        filename = match[1];
+      }
+    }
+    
+    // 获取 CSV 内容并创建下载
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    
+    // 恢复按钮状态
+    exportBtn.innerHTML = originalText;
+    exportBtn.disabled = false;
+    
+    // 显示成功通知
+    showNotification('REPORT EXPORTED SUCCESSFULLY 📊');
+    playSound('success');
+    
+    console.log('✅ CSV 报告已导出:', filename);
+  } catch (err) {
+    console.error('❌ 导出 CSV 失败:', err);
+    
+    // 恢复按钮状态
+    const exportBtn = document.getElementById('exportBtn');
+    if (exportBtn) {
+      exportBtn.innerHTML = '<span class="btn-icon">📊</span> 导出报告';
+      exportBtn.disabled = false;
+    }
+    
+    // 显示错误通知
+    showNotification('EXPORT FAILED: ' + err.message, 'error');
+    playSound('error');
   }
 }
 
