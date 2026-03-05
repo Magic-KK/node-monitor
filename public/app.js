@@ -1,6 +1,6 @@
 /**
  * Node Monitor - 前端逻辑
- * 负责状态轮询、UI 渲染、用户交互
+ * 赛博朋克风格版本
  * 
  * @author 牛开发 🐮💻
  */
@@ -24,7 +24,8 @@ const offlineNodesEl = document.getElementById('offlineNodes');
  * 初始化应用
  */
 async function init() {
-  console.log('🚀 初始化节点监控...');
+  console.log('🚀 SYSTEM INITIALIZING...');
+  console.log('🤖 J.A.R.V.I.S. NODE MONITOR - CYBERPUNK EDITION');
   
   // 加载配置
   await loadConfig();
@@ -38,7 +39,7 @@ async function init() {
   // 启动自动刷新
   startAutoRefresh();
   
-  console.log('✅ 初始化完成');
+  console.log('✅ SYSTEM ONLINE');
 }
 
 /**
@@ -51,12 +52,12 @@ async function loadConfig() {
     
     if (result.success) {
       config = result.data;
-      console.log('📋 配置加载成功:', config.teamName, `(源：${config.source})`);
-      document.title = `${config.teamName} - 节点监控`;
+      console.log('📋 CONFIG LOADED:', config.teamName);
+      document.title = `${config.teamName} | CYBERPUNK EDITION`;
     }
   } catch (err) {
-    console.error('配置加载失败:', err);
-    showError('无法加载配置，请检查服务器连接');
+    console.error('⚠️ CONFIG LOAD FAILED:', err);
+    showError('SYSTEM ERROR: UNABLE TO LOAD CONFIGURATION');
   }
 }
 
@@ -78,11 +79,11 @@ async function fetchStatus() {
       updateStats(result.data);
       updateLastUpdateTime(result.data.lastUpdate);
     } else {
-      showError('获取状态失败：' + result.error);
+      showError('SYSTEM ERROR: ' + result.error);
     }
   } catch (err) {
-    console.error('状态获取失败:', err);
-    showError('无法连接服务器，请检查网络');
+    console.error('⚠️ STATUS FETCH FAILED:', err);
+    showError('CONNECTION ERROR: CHECK NETWORK');
   } finally {
     isRefreshing = false;
     updateButtonState(false);
@@ -97,7 +98,7 @@ async function runHealthCheck() {
   
   updateButtonState(true);
   healthCheckBtn.disabled = true;
-  healthCheckBtn.innerHTML = '<span class="btn-icon">⏳</span> 检查中...';
+  healthCheckBtn.innerHTML = '<span class="btn-icon">⏳</span> SCANNING...';
   
   try {
     const response = await fetch('/api/health-check', { method: 'POST' });
@@ -109,13 +110,13 @@ async function runHealthCheck() {
       updateLastUpdateTime(result.data.checkTime);
       
       // 显示成功提示
-      showNotification(`健康检查完成：${result.data.onlineCount}/${result.data.configuredCount} 节点在线`);
+      showNotification(`SCAN COMPLETE: ${result.data.onlineCount}/${result.data.configuredCount} NODES ONLINE`);
     } else {
-      showError('健康检查失败：' + result.error);
+      showError('SCAN FAILED: ' + result.error);
     }
   } catch (err) {
-    console.error('健康检查失败:', err);
-    showError('无法执行健康检查');
+    console.error('⚠️ HEALTH CHECK FAILED:', err);
+    showError('UNABLE TO EXECUTE SCAN');
   } finally {
     updateButtonState(false);
     healthCheckBtn.disabled = false;
@@ -129,7 +130,7 @@ async function runHealthCheck() {
  */
 function renderNodes(nodes) {
   if (!config || !config.nodes) {
-    nodesGrid.innerHTML = '<div class="error-message">配置未加载</div>';
+    nodesGrid.innerHTML = '<div class="error-message">SYSTEM ERROR: CONFIGURATION NOT LOADED</div>';
     return;
   }
   
@@ -145,23 +146,23 @@ function renderNodes(nodes) {
 function createNodeCard(node) {
   // 确定状态类别
   let statusClass = 'offline';
-  let statusText = '离线';
+  let statusText = 'OFFLINE';
   let statusBadgeClass = 'status-offline';
   
   if (!node.configured) {
     // 未配置
     statusClass = 'unconfigured';
-    statusText = '未配置';
+    statusText = 'NOT CONFIGURED';
     statusBadgeClass = 'status-unconfigured';
   } else if (node.online) {
     // 已配置且在线
     statusClass = 'online';
-    statusText = '在线';
+    statusText = 'ONLINE';
     statusBadgeClass = 'status-online';
   } else if (node.configured) {
     // 已配置但离线
     statusClass = 'offline';
-    statusText = '离线';
+    statusText = 'OFFLINE';
     statusBadgeClass = 'status-offline';
   }
   
@@ -171,7 +172,7 @@ function createNodeCard(node) {
         <span class="node-emoji">${node.emoji || '📡'}</span>
         <div class="node-info">
           <div class="node-name">${node.name}</div>
-          <div class="node-role">${node.role || '节点'}</div>
+          <div class="node-role">${node.role || 'NODE'}</div>
         </div>
         <span class="status-badge ${statusBadgeClass}">
           <span class="status-dot"></span>
@@ -180,18 +181,18 @@ function createNodeCard(node) {
       </div>
       
       <div class="node-description">
-        ${node.description || '暂无描述'}
+        ${node.description || 'No description available'}
       </div>
       
       ${!node.configured ? `
       <div class="node-details">
         <div class="detail-row" style="color: var(--warning)">
-          <span class="detail-label">⚠️ 状态</span>
-          <span class="detail-value">未配置（appId 无效）</span>
+          <span class="detail-label">⚠️ STATUS</span>
+          <span class="detail-value">APP_ID NOT CONFIGURED</span>
         </div>
         ${node.workspace ? `
         <div class="detail-row">
-          <span class="detail-label">工作空间</span>
+          <span class="detail-label">WORKSPACE</span>
           <span class="detail-value">${node.workspace}</span>
         </div>
         ` : ''}
@@ -199,22 +200,22 @@ function createNodeCard(node) {
       ` : `
       <div class="node-details">
         <div class="detail-row">
-          <span class="detail-label">工作空间</span>
-          <span class="detail-value">${node.workspace || '-'}</span>
+          <span class="detail-label">WORKSPACE</span>
+          <span class="detail-value">${node.workspace || 'N/A'}</span>
         </div>
         ${node.responseTime ? `
         <div class="detail-row">
-          <span class="detail-label">响应时间</span>
+          <span class="detail-label">RESPONSE TIME</span>
           <span class="detail-value response-time">${node.responseTime}ms</span>
         </div>
         ` : ''}
         <div class="detail-row">
-          <span class="detail-label">最后检查</span>
+          <span class="detail-label">LAST CHECK</span>
           <span class="detail-value">${formatTime(node.lastCheck)}</span>
         </div>
         ${node.error ? `
         <div class="detail-row">
-          <span class="detail-label">错误</span>
+          <span class="detail-label">ERROR</span>
           <span class="detail-value" style="color: var(--danger)">${node.error}</span>
         </div>
         ` : ''}
@@ -260,11 +261,12 @@ function formatTime(isoString) {
   
   // 如果是 1 分钟内，显示"刚刚"
   if (diff < 60000) {
-    return '刚刚';
+    return 'JUST NOW';
   }
   
   // 否则显示具体时间
-  return date.toLocaleTimeString('zh-CN', { 
+  return date.toLocaleTimeString('en-US', { 
+    hour12: false,
     hour: '2-digit', 
     minute: '2-digit',
     second: '2-digit'
@@ -278,7 +280,7 @@ function formatTime(isoString) {
 function updateButtonState(loading) {
   refreshBtn.disabled = loading;
   refreshBtn.innerHTML = loading 
-    ? '<span class="btn-icon">⏳</span> 刷新中...' 
+    ? '<span class="btn-icon">⏳</span> REFRESHING...' 
     : '<span class="btn-icon">🔄</span> 刷新状态';
 }
 
@@ -311,9 +313,9 @@ function bindEvents() {
   // 自动刷新开关
   autoRefreshToggle.addEventListener('change', () => {
     if (autoRefreshToggle.checked) {
-      showNotification('自动刷新已开启');
+      showNotification('AUTO-REFRESH ENABLED');
     } else {
-      showNotification('自动刷新已关闭');
+      showNotification('AUTO-REFRESH DISABLED');
     }
   });
   
@@ -337,7 +339,7 @@ function bindEvents() {
 function showError(message) {
   const errorEl = document.createElement('div');
   errorEl.className = 'error-message';
-  errorEl.textContent = message;
+  errorEl.textContent = '⚠️ ' + message;
   
   // 插入到顶部
   nodesGrid.parentNode.insertBefore(errorEl, nodesGrid);
@@ -353,7 +355,7 @@ function showError(message) {
 function showNotification(message) {
   // 使用浏览器通知（如果支持）
   if ('Notification' in window && Notification.permission === 'granted') {
-    new Notification('节点监控', {
+    new Notification('J.A.R.V.I.S. MONITOR', {
       body: message,
       icon: '🤖'
     });
@@ -368,7 +370,9 @@ function showNotification(message) {
  */
 function requestNotificationPermission() {
   if ('Notification' in window && Notification.permission === 'default') {
-    Notification.requestPermission();
+    Notification.requestPermission().then(permission => {
+      console.log('🔔 Notification permission:', permission);
+    });
   }
 }
 

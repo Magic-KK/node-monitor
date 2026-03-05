@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>J.A.R.V.I.S. 节点监控</title>
+  <title>J.A.R.V.I.S. 节点监控 | 赛博朋克版</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
 </head>
 <body>
   <div class="container">
@@ -15,7 +16,7 @@
           <span class="logo">🤖</span>
           J.A.R.V.I.S. 节点监控
         </h1>
-        <p class="subtitle">团队节点状态实时监控面板</p>
+        <p class="subtitle">CYBERPUNK EDITION // 团队节点状态实时监控面板</p>
       </div>
       
       <div class="header-stats">
@@ -52,7 +53,7 @@
         <span class="toggle-label">自动刷新</span>
       </div>
       <div class="last-update">
-        最后更新：<span id="lastUpdate">-</span>
+        <span style="color: var(--neon-cyan)">LAST_UPDATE:</span> <span id="lastUpdate">-</span>
       </div>
     </div>
 
@@ -61,15 +62,19 @@
       <!-- 节点卡片将通过 JS 动态生成 -->
       <div class="loading">
         <div class="spinner"></div>
-        <p>加载中...</p>
+        <p>SYSTEM INITIALIZING...</p>
       </div>
     </div>
 
     <!-- 页脚 -->
     <footer class="footer">
       <p>
-        Made with ❤️ by 牛开发 🐮💻 | 
-        <a href="/api/status" target="_blank">API 文档</a>
+        <span style="color: var(--neon-cyan)">MADE WITH</span> ❤️ <span style="color: var(--neon-cyan)">BY 牛开发</span> 🐮💻 | 
+        <a href="/api/status" target="_blank">API DOCS</a> |
+        <a href="https://github.com/Magic-KK/node-monitor" target="_blank">GITHUB</a>
+      </p>
+      <p style="margin-top: 10px; font-size: 0.75rem; color: var(--text-muted);">
+        SYSTEM VERSION 1.1.0 // CYBERPUNK EDITION
       </p>
     </footer>
   </div>
