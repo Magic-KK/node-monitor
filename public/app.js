@@ -50,6 +50,16 @@ const offlineNodesEl = document.getElementById('offlineNodes');
 const searchInput = document.getElementById('searchInput');
 const clearSearchBtn = document.getElementById('clearSearchBtn');
 
+// 系统指标元素
+const cpuUsageEl = document.getElementById('cpuUsage');
+const cpuBarEl = document.getElementById('cpuBar');
+const memoryUsageEl = document.getElementById('memoryUsage');
+const memoryBarEl = document.getElementById('memoryBar');
+const memoryDetailEl = document.getElementById('memoryDetail');
+const uptimeEl = document.getElementById('uptime');
+const platformDetailEl = document.getElementById('platformDetail');
+const metricsLastUpdateEl = document.getElementById('metricsLastUpdate');
+
 // 弹窗元素
 const nodeModal = document.getElementById('nodeModal');
 const modalTitle = document.getElementById('modalTitle');
@@ -82,6 +92,9 @@ async function init() {
   
   // 初始状态获取
   await fetchStatus();
+  
+  // 获取系统指标
+  await fetchSystemMetrics();
   
   // 绑定事件
   bindEvents();
@@ -173,6 +186,8 @@ async function fetchStatus() {
       updateLastUpdateTime(result.data.lastUpdate);
       // 更新响应时间历史
       updateResponseTimeHistory(result.data.nodes);
+      // 同时更新系统指标
+      fetchSystemMetrics();
     } else {
       showError('SYSTEM ERROR: ' + result.error);
     }
@@ -410,6 +425,74 @@ function updateStats(data) {
 }
 
 /**
+ * 获取系统指标（CPU、内存、运行时间）
+ */
+async function fetchSystemMetrics() {
+  try {
+    const response = await fetch('/api/system-metrics');
+    const result = await response.json();
+    
+    if (result.success) {
+      updateSystemMetrics(result.data);
+    }
+  } catch (err) {
+    console.error('⚠️ SYSTEM METRICS FETCH FAILED:', err);
+    // 静默失败，不影响主功能
+  }
+}
+
+/**
+ * 更新系统指标 UI
+ * @param {Object} metrics - 系统指标数据
+ */
+function updateSystemMetrics(metrics) {
+  // 更新 CPU 使用率
+  if (cpuUsageEl && cpuBarEl) {
+    const cpu = metrics.cpu || 0;
+    cpuUsageEl.textContent = cpu.toFixed(1);
+    cpuBarEl.style.width = `${Math.min(cpu, 100)}%`;
+    
+    // 根据 CPU 使用率设置颜色
+    if (cpu < 50) {
+      cpuBarEl.style.background = 'var(--success)';
+    } else if (cpu < 80) {
+      cpuBarEl.style.background = 'var(--warning)';
+    } else {
+      cpuBarEl.style.background = 'var(--danger)';
+    }
+  }
+  
+  // 更新内存使用率
+  if (memoryUsageEl && memoryBarEl && memoryDetailEl) {
+    const memory = metrics.memory || {};
+    const percent = memory.percent || 0;
+    memoryUsageEl.textContent = percent.toFixed(1);
+    memoryBarEl.style.width = `${Math.min(percent, 100)}%`;
+    memoryDetailEl.textContent = `${memory.usedFormatted || '-'} / ${memory.totalFormatted || '-'}`;
+    
+    // 根据内存使用率设置颜色
+    if (percent < 50) {
+      memoryBarEl.style.background = 'var(--success)';
+    } else if (percent < 80) {
+      memoryBarEl.style.background = 'var(--warning)';
+    } else {
+      memoryBarEl.style.background = 'var(--danger)';
+    }
+  }
+  
+  // 更新运行时间
+  if (uptimeEl && platformDetailEl) {
+    uptimeEl.textContent = metrics.uptimeFormatted || '-';
+    platformDetailEl.textContent = metrics.platform || '-';
+  }
+  
+  // 更新指标最后更新时间
+  if (metricsLastUpdateEl) {
+    metricsLastUpdateEl.textContent = formatTime(metrics.lastUpdate);
+  }
+}
+
+/**
  * 更新最后更新时间
  * @param {string} timestamp - ISO 时间戳
  */
@@ -462,10 +545,11 @@ function startAutoRefresh() {
     clearInterval(autoRefreshInterval);
   }
   
-  // 每 30 秒自动刷新
+  // 每 30 秒自动刷新状态
   autoRefreshInterval = setInterval(() => {
     if (autoRefreshToggle.checked && !isRefreshing) {
       fetchStatus();
+      fetchSystemMetrics();
     }
   }, 30000);
 }
