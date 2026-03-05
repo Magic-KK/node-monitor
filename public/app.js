@@ -282,6 +282,11 @@ function renderNodes(nodes) {
   setTimeout(() => {
     drawConnections(filteredNodes);
   }, 100);
+  
+  // 初始化 3D 卡片效果（延迟等待 DOM 渲染完成）
+  setTimeout(() => {
+    init3DCards();
+  }, 150);
 }
 
 /**
@@ -1502,6 +1507,61 @@ function drawConnectionLine(ctx, x1, y1, x2, y2, lineColor, glowColor, isActive)
   ctx.fillStyle = isActive ? glowColor : lineColor;
   ctx.fill();
   ctx.restore();
+}
+
+// ===== 3D 卡片倾斜效果 =====
+
+/**
+ * 初始化 3D 卡片效果
+ */
+function init3DCards() {
+  const nodeCards = document.querySelectorAll('.node-card');
+  
+  nodeCards.forEach(card => {
+    // 创建光晕层
+    const glowLayer = document.createElement('div');
+    glowLayer.className = 'node-card-glow';
+    card.appendChild(glowLayer);
+    
+    // 包裹内容为 3D 内容层
+    const contentWrapper = document.createElement('div');
+    contentWrapper.className = 'node-card-content';
+    
+    // 移动所有子元素到内容层（除了光晕层）
+    const children = Array.from(card.children).filter(child => !child.classList.contains('node-card-glow'));
+    children.forEach(child => contentWrapper.appendChild(child));
+    
+    card.appendChild(contentWrapper);
+    
+    // 鼠标移动时的 3D 倾斜效果
+    card.addEventListener('mousemove', (e) => {
+      const rect = card.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      
+      // 计算中心点
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+      
+      // 计算倾斜角度（最大 15 度）
+      const rotateX = ((y - centerY) / centerY) * -15;
+      const rotateY = ((x - centerX) / centerX) * 15;
+      
+      // 应用 3D 变换
+      card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`;
+      
+      // 更新光晕位置
+      card.style.setProperty('--mouse-x', `${(x / rect.width) * 100}%`);
+      card.style.setProperty('--mouse-y', `${(y / rect.height) * 100}%`);
+    });
+    
+    // 鼠标离开时恢复
+    card.addEventListener('mouseleave', () => {
+      card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1)';
+    });
+  });
+  
+  console.log('🎴 3D CARD EFFECT INITIALIZED');
 }
 
 // 页面加载完成后初始化

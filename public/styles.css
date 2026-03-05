@@ -679,9 +679,10 @@ body::after {
   grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
   gap: 25px;
   margin-bottom: 30px;
+  perspective: 1000px; /* 3D 透视效果 */
 }
 
-/* 节点卡片 - 赛博朋克版 */
+/* 节点卡片 - 赛博朋克 3D 版 */
 .node-card {
   background: var(--bg-card);
   border-radius: var(--border-radius);
@@ -689,11 +690,13 @@ body::after {
   border: 1px solid rgba(0, 245, 255, 0.15);
   box-shadow: 
     0 0 30px rgba(0, 0, 0, 0.5),
-    inset 0 0 60px rgba(0, 245, 255, 0.03);
-  transition: var(--transition);
+    inset 0 0 60px rgba(0, 245, 255, 0.03),
+    0 10px 30px rgba(0, 0, 0, 0.3); /* 底部阴影增强深度 */
+  transition: transform 0.1s ease-out, box-shadow 0.3s ease, border-color 0.3s ease;
   position: relative;
   overflow: hidden;
   backdrop-filter: blur(10px);
+  transform-style: preserve-3d; /* 保持 3D 变换 */
 }
 
 .node-card::before {
@@ -725,11 +728,40 @@ body::after {
 }
 
 .node-card:hover {
-  transform: translateY(-8px) scale(1.02);
   border-color: var(--neon-cyan);
   box-shadow: 
-    0 20px 60px rgba(0, 245, 255, 0.2),
-    inset 0 0 80px rgba(0, 245, 255, 0.05);
+    0 25px 80px rgba(0, 245, 255, 0.25),
+    inset 0 0 80px rgba(0, 245, 255, 0.05),
+    0 15px 40px rgba(0, 0, 0, 0.4); /* 增强底部阴影 */
+}
+
+/* 3D 卡片内容层 - 制造浮起效果 */
+.node-card-content {
+  transform: translateZ(20px); /* 内容层浮起 20px */
+  position: relative;
+  z-index: 2;
+}
+
+/* 卡片光晕层 - 在内容层下方 */
+.node-card-glow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(
+    circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    rgba(0, 245, 255, 0.15) 0%,
+    transparent 60%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.node-card:hover .node-card-glow {
+  opacity: 1;
 }
 
 .node-card:hover::before {
