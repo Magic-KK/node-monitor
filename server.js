@@ -8,7 +8,7 @@
  * - 静态文件服务（前端页面）
  * 
  * @author 牛开发 🐮💻
- * @version 1.0.0
+ * @version 1.26.0 - 性能优化版本
  */
 
 const express = require('express');
@@ -17,6 +17,147 @@ const fs = require('fs');
 const http = require('http');
 const os = require('os');
 const WebSocket = require('ws');
+
+// ===== 性能优化模块 =====
+
+/**
+ * 响应缓存系统
+ */
+const responseCache = new Map();
+const CACHE_CONFIG = {
+  enabled: true,
+  defaultTTL: 5000, // 默认缓存时间 5 秒
+  maxEntries: 100 // 最大缓存条目数
+};
+
+/**
+ * 缓存中间件
+ * @param {number} ttl - 缓存时间（毫秒）
+ * @returns {Function} Express 中间件
+ */
+function cacheMiddleware(ttl = CACHE_CONFIG.defaultTTL) {
+  return (req, res, next) => {
+    if (!CACHE_CONFIG.enabled || req.method !== 'GET') {
+      return next();
+    }
+    
+    const cacheKey = `GET:${req.originalUrl}`;
+    const cached = responseCache.get(cacheKey);
+    
+    if (cached && Date.now() - cached.timestamp < cached.ttl) {
+      // 缓存命中
+      res.set('X-Cache', 'HIT');
+      return res.json(cached.data);
+    }
+    
+    // 缓存未命中，拦截响应
+    const originalJson = res.json.bind(res);
+    res.json = (data) => {
+      // 存储缓存
+      if (responseCache.size >= CACHE_CONFIG.maxEntries) {
+        // 清除最旧的缓存
+        const oldestKey = responseCache.keys().next().value;
+        responseCache.delete(oldestKey);
+      }
+      
+      responseCache.set(cacheKey, {
+        data,
+        timestamp: Date.now(),
+        ttl
+      });
+      
+      res.set('X-Cache', 'MISS');
+      return originalJson(data);
+    };
+    
+    next();
+  };
+}
+
+/**
+ * 清除缓存
+ * @param {string} pattern - 缓存键模式（支持通配符）
+ */
+function clearCache(pattern) {
+  if (!pattern) {
+    responseCache.clear();
+    return;
+  }
+  
+  const regex = new RegExp(pattern.replace('*', '.*'));
+  for (const key of responseCache.keys()) {
+    if (regex.test(key)) {
+      responseCache.delete(key);
+    }
+  }
+}
+
+/**
+ * 定时清理过期缓存（每 30 秒）
+ */
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, value] of responseCache.entries()) {
+    if (now - value.timestamp > value.ttl) {
+      responseCache.delete(key);
+    }
+  }
+}, 30000);
+
+/**
+ * 性能监控
+ */
+const perfStats = {
+  requests: 0,
+  cacheHits: 0,
+  cacheMisses: 0,
+  startTime: Date.now()
+};
+
+/**
+ * 性能监控中间件
+ */
+function perfMiddleware(req, res, next) {
+  perfStats.requests++;
+  const start = Date.now();
+  
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    const cacheHeader = res.get('X-Cache');
+    
+    if (cacheHeader === 'HIT') {
+      perfStats.cacheHits++;
+    } else if (cacheHeader === 'MISS') {
+      perfStats.cacheMisses++;
+    }
+    
+    // 记录慢请求
+    if (duration > 1000) {
+      console.log(`⚠️ 慢请求：${req.method} ${req.originalUrl} - ${duration}ms`);
+    }
+  });
+  
+  next();
+}
+
+/**
+ * 获取性能统计
+ */
+function getPerfStats() {
+  const uptime = Date.now() - perfStats.startTime;
+  const hitRate = perfStats.requests > 0 
+    ? ((perfStats.cacheHits / perfStats.requests) * 100).toFixed(2)
+    : 0;
+  
+  return {
+    uptime,
+    totalRequests: perfStats.requests,
+    cacheHits: perfStats.cacheHits,
+    cacheMisses: perfStats.cacheMisses,
+    cacheHitRate: hitRate + '%',
+    cacheSize: responseCache.size
+  };
+}
 
 // 加载 package.json 获取版本信息
 const packageJson = require('./package.json');
@@ -1531,8 +1672,15 @@ function broadcastStatusUpdate(statuses) {
 // 中间件 - 解析 JSON
 app.use(express.json());
 
-// 静态文件服务
-app.use(express.static(path.join(__dirname, 'public')));
+// 性能监控中间件
+app.use(perfMiddleware);
+
+// 静态文件服务（带缓存控制）
+app.use(express.static(path.join(__dirname, 'public'), {
+  maxAge: '1d', // 静态资源缓存 1 天
+  etag: true,
+  lastModified: true
+}));
 
 /**
  * API: 健康检查端点（用于 Docker 健康检查）
@@ -1544,7 +1692,32 @@ app.get('/api/health', (req, res) => {
     status: 'healthy',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    version: packageJson.version || '1.25.0'
+    version: packageJson.version || '1.26.0'
+  });
+});
+
+/**
+ * API: 获取性能统计
+ * GET /api/perf
+ */
+app.get('/api/perf', (req, res) => {
+  res.json({
+    success: true,
+    data: getPerfStats()
+  });
+});
+
+/**
+ * API: 清除缓存
+ * POST /api/cache/clear
+ */
+app.post('/api/cache/clear', (req, res) => {
+  const pattern = req.query.pattern || '*';
+  clearCache(pattern);
+  res.json({
+    success: true,
+    message: `Cache cleared (pattern: ${pattern})`,
+    remainingCache: responseCache.size
   });
 });
 
@@ -1552,7 +1725,7 @@ app.get('/api/health', (req, res) => {
  * API: 获取团队配置（从 OpenClaw 读取）
  * GET /api/config
  */
-app.get('/api/config', (req, res) => {
+app.get('/api/config', cacheMiddleware(30000), (req, res) => {
   const nodes = buildRealNodeList();
   
   res.json({
@@ -1571,7 +1744,7 @@ app.get('/api/config', (req, res) => {
  * API: 获取所有节点状态
  * GET /api/status
  */
-app.get('/api/status', async (req, res) => {
+app.get('/api/status', cacheMiddleware(3000), async (req, res) => {
   try {
     const statuses = Array.from(nodeStatusCache.values());
     const nodes = buildRealNodeList();
@@ -1674,7 +1847,7 @@ app.post('/api/reload-config', (req, res) => {
  * API: 获取系统指标（CPU/内存使用率）
  * GET /api/system-metrics
  */
-app.get('/api/system-metrics', (req, res) => {
+app.get('/api/system-metrics', cacheMiddleware(5000), (req, res) => {
   res.json({
     success: true,
     data: {
@@ -1759,7 +1932,7 @@ app.get('/api/export/csv', async (req, res) => {
  * - startTime: 开始时间（ISO 格式，可选）
  * - endTime: 结束时间（ISO 格式，可选）
  */
-app.get('/api/history', (req, res) => {
+app.get('/api/history', cacheMiddleware(10000), (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit) || 50, 200);
     const nodeId = req.query.nodeId;
@@ -1831,7 +2004,7 @@ app.get('/api/history', (req, res) => {
  * 
  * 返回节点在线率、平均响应时间等统计信息
  */
-app.get('/api/history/stats', (req, res) => {
+app.get('/api/history/stats', cacheMiddleware(15000), (req, res) => {
   try {
     const days = parseInt(req.query.days) || 7; // 默认统计最近 7 天
     

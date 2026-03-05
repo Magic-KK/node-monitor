@@ -3,7 +3,176 @@
  * 赛博朋克风格版本
  * 
  * @author 牛开发 🐮💻
+ * @version 1.26.0 - 性能优化版本
  */
+
+// ===== 性能优化模块 =====
+
+/**
+ * 防抖函数 - 延迟执行，直到等待时间结束
+ * @param {Function} func - 要执行的函数
+ * @param {number} wait - 等待时间（毫秒）
+ * @returns {Function} 防抖后的函数
+ */
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
+/**
+ * 节流函数 - 限制函数执行频率
+ * @param {Function} func - 要执行的函数
+ * @param {number} limit - 时间限制（毫秒）
+ * @returns {Function} 节流后的函数
+ */
+function throttle(func, limit) {
+  let inThrottle;
+  return function(...args) {
+    if (!inThrottle) {
+      func.apply(this, args);
+      inThrottle = true;
+      setTimeout(() => inThrottle = false, limit);
+    }
+  };
+}
+
+/**
+ * 虚拟滚动配置
+ */
+const VIRTUAL_SCROLL_CONFIG = {
+  enabled: true, // 是否启用虚拟滚动
+  threshold: 20, // 节点数量超过此值时启用虚拟滚动
+  itemHeight: 280, // 每个卡片的高度（像素）
+  overscan: 3, // 额外渲染的卡片数量（上下各渲染几个）
+  containerPadding: 20 // 容器内边距
+};
+
+/**
+ * 性能监控配置
+ */
+const PERF_CONFIG = {
+  logEnabled: false, // 是否记录性能日志
+  frameRateTarget: 60, // 目标帧率
+  renderBudget: 16 // 渲染预算（毫秒，60fps 对应 16ms）
+};
+
+/**
+ * 性能计时器
+ */
+const perfTimers = new Map();
+
+/**
+ * 开始性能计时
+ * @param {string} label - 计时器标签
+ */
+function perfStart(label) {
+  if (PERF_CONFIG.logEnabled) {
+    perfTimers.set(label, performance.now());
+  }
+}
+
+/**
+ * 结束性能计时并记录
+ * @param {string} label - 计时器标签
+ */
+function perfEnd(label) {
+  if (PERF_CONFIG.logEnabled && perfTimers.has(label)) {
+    const start = perfTimers.get(label);
+    const duration = performance.now() - start;
+    console.log(`⏱️ [PERF] ${label}: ${duration.toFixed(2)}ms`);
+    perfTimers.delete(label);
+  }
+}
+
+/**
+ * 使用 requestAnimationFrame 优化动画
+ */
+let rafId = null;
+let rafCallbacks = [];
+
+/**
+ * 批量注册 RAF 回调
+ * @param {Function} callback - 回调函数
+ */
+function requestRAF(callback) {
+  rafCallbacks.push(callback);
+  if (!rafId) {
+    rafId = requestAnimationFrame(processRAF);
+  }
+}
+
+/**
+ * 处理所有 RAF 回调
+ */
+function processRAF() {
+  const callbacks = rafCallbacks.slice();
+  rafCallbacks = [];
+  rafId = null;
+  
+  callbacks.forEach(cb => {
+    try {
+      cb();
+    } catch (err) {
+      console.error('❌ RAF 回调错误:', err);
+    }
+  });
+  
+  // 如果还有回调，继续调度
+  if (rafCallbacks.length > 0) {
+    rafId = requestAnimationFrame(processRAF);
+  }
+}
+
+/**
+ * 懒加载资源
+ */
+const lazyLoadQueue = [];
+let lazyLoadProcessing = false;
+
+/**
+ * 注册懒加载任务
+ * @param {Function} loadFn - 加载函数
+ * @param {number} priority - 优先级（数字越小优先级越高）
+ */
+function lazyLoad(loadFn, priority = 10) {
+  lazyLoadQueue.push({ loadFn, priority });
+  lazyLoadQueue.sort((a, b) => a.priority - b.priority);
+  processLazyLoad();
+}
+
+/**
+ * 处理懒加载队列
+ */
+function processLazyLoad() {
+  if (lazyLoadProcessing || lazyLoadQueue.length === 0) return;
+  
+  lazyLoadProcessing = true;
+  
+  const task = lazyLoadQueue.shift();
+  
+  // 使用 requestIdleCallback 在非关键时段加载
+  if (typeof requestIdleCallback !== 'undefined') {
+    requestIdleCallback(() => {
+      task.loadFn();
+      lazyLoadProcessing = false;
+      processLazyLoad();
+    }, { timeout: 2000 });
+  } else {
+    // 降级方案：使用 setTimeout
+    setTimeout(() => {
+      task.loadFn();
+      lazyLoadProcessing = false;
+      processLazyLoad();
+    }, 100);
+  }
+}
 
 // ===== 粒子背景系统 =====
 let particleCanvas = null;
@@ -40,6 +209,16 @@ let favorites = new Set(); // 收藏的节点 ID 集合
 let showFavoritesOnly = false; // 是否只显示收藏节点
 let nodeOrder = []; // 自定义节点排序顺序
 let draggedNode = null; // 当前拖拽的节点
+
+// 虚拟滚动状态
+let virtualScrollState = {
+  enabled: false,
+  scrollTop: 0,
+  containerHeight: 0,
+  visibleStart: 0,
+  visibleEnd: 0,
+  totalHeight: 0
+};
 
 // DOM 元素
 const nodesGrid = document.getElementById('nodesGrid');
@@ -907,10 +1086,12 @@ async function runHealthCheck() {
 }
 
 /**
- * 渲染节点卡片
+ * 渲染节点卡片（支持虚拟滚动优化）
  * @param {Array} nodes - 节点状态数组
  */
 function renderNodes(nodes) {
+  perfStart('renderNodes');
+  
   if (!config || !config.nodes) {
     nodesGrid.innerHTML = '<div class="error-message">SYSTEM ERROR: CONFIGURATION NOT LOADED</div>';
     return;
@@ -936,6 +1117,9 @@ function renderNodes(nodes) {
   const filteredNodes = filterNodes(favoriteFilteredNodes, searchQuery);
   const sortedNodes = applyNodeOrder(filteredNodes); // 应用自定义排序
   
+  // 更新搜索按钮状态
+  updateClearSearchButton();
+  
   // 生成 HTML
   if (filteredNodes.length === 0) {
     const noResultsMessage = showFavoritesOnly && favorites.size === 0 
@@ -949,12 +1133,28 @@ function renderNodes(nodes) {
         <div class="no-results-text">${noResultsMessage}</div>
       </div>
     `;
+    
+    // 禁用虚拟滚动
+    virtualScrollState.enabled = false;
+    if (nodesGrid) {
+      nodesGrid.style.height = 'auto';
+      nodesGrid.style.overflow = 'visible';
+    }
   } else {
-    nodesGrid.innerHTML = sortedNodes.map(node => createNodeCard(node)).join('');
+    // 检查是否启用虚拟滚动
+    const shouldEnableVirtualScroll = VIRTUAL_SCROLL_CONFIG.enabled && 
+      sortedNodes.length >= VIRTUAL_SCROLL_CONFIG.threshold;
+    
+    if (shouldEnableVirtualScroll) {
+      renderNodesVirtual(sortedNodes);
+    } else {
+      // 传统渲染模式
+      virtualScrollState.enabled = false;
+      nodesGrid.innerHTML = sortedNodes.map(node => createNodeCard(node)).join('');
+      nodesGrid.style.height = 'auto';
+      nodesGrid.style.overflow = 'visible';
+    }
   }
-  
-  // 更新搜索按钮状态
-  updateClearSearchButton();
   
   // 绘制节点连线（延迟等待 DOM 渲染完成）
   setTimeout(() => {
@@ -965,6 +1165,158 @@ function renderNodes(nodes) {
   setTimeout(() => {
     init3DCards();
   }, 150);
+  
+  perfEnd('renderNodes');
+}
+
+/**
+ * 虚拟滚动渲染（性能优化）
+ * @param {Array} nodes - 节点数组
+ */
+function renderNodesVirtual(nodes) {
+  perfStart('renderNodesVirtual');
+  
+  virtualScrollState.enabled = true;
+  virtualScrollState.totalHeight = nodes.length * VIRTUAL_SCROLL_CONFIG.itemHeight;
+  
+  // 设置容器样式支持滚动
+  nodesGrid.style.height = '600px';
+  nodesGrid.style.overflowY = 'auto';
+  nodesGrid.style.position = 'relative';
+  
+  // 创建虚拟滚动容器
+  const virtualContainer = document.createElement('div');
+  virtualContainer.className = 'virtual-scroll-container';
+  virtualContainer.style.height = virtualScrollState.totalHeight + 'px';
+  virtualContainer.style.position = 'relative';
+  
+  // 计算可见区域
+  updateVisibleRange(nodes);
+  
+  // 渲染可见节点
+  renderVisibleNodes(nodes, virtualContainer);
+  
+  // 添加到 DOM
+  nodesGrid.innerHTML = '';
+  nodesGrid.appendChild(virtualContainer);
+  
+  // 绑定滚动事件（使用节流优化）
+  const throttledScroll = throttle(() => {
+    virtualScrollState.scrollTop = nodesGrid.scrollTop;
+    updateVisibleRange(nodes);
+    renderVisibleNodes(nodes, virtualContainer);
+  }, 16); // 约 60fps
+  
+  nodesGrid.addEventListener('scroll', throttledScroll, { passive: true });
+  
+  perfEnd('renderNodesVirtual');
+}
+
+/**
+ * 更新可见范围
+ * @param {Array} nodes - 节点数组
+ */
+function updateVisibleRange(nodes) {
+  const containerHeight = nodesGrid.clientHeight;
+  const scrollTop = nodesGrid.scrollTop;
+  
+  const startIndex = Math.max(
+    0,
+    Math.floor(scrollTop / VIRTUAL_SCROLL_CONFIG.itemHeight) - VIRTUAL_SCROLL_CONFIG.overscan
+  );
+  
+  const endIndex = Math.min(
+    nodes.length,
+    Math.ceil((scrollTop + containerHeight) / VIRTUAL_SCROLL_CONFIG.itemHeight) + VIRTUAL_SCROLL_CONFIG.overscan
+  );
+  
+  virtualScrollState.visibleStart = startIndex;
+  virtualScrollState.visibleEnd = endIndex;
+  virtualScrollState.containerHeight = containerHeight;
+  virtualScrollState.scrollTop = scrollTop;
+}
+
+/**
+ * 渲染可见节点
+ * @param {Array} nodes - 节点数组
+ * @param {HTMLElement} container - 容器元素
+ */
+function renderVisibleNodes(nodes, container) {
+  const { visibleStart, visibleEnd, scrollTop } = virtualScrollState;
+  
+  // 获取当前可见的卡片
+  const visibleCards = container.querySelectorAll('.node-card');
+  const visibleIds = new Set();
+  
+  // 更新或创建可见节点
+  for (let i = visibleStart; i < visibleEnd; i++) {
+    const node = nodes[i];
+    visibleIds.add(node.id);
+    
+    let card = container.querySelector(`[data-node-id="${node.id}"]`);
+    
+    if (!card) {
+      // 创建新卡片
+      card = document.createElement('div');
+      card.className = 'node-card';
+      card.setAttribute('data-node-id', node.id);
+      card.style.position = 'absolute';
+      card.style.top = (i * VIRTUAL_SCROLL_CONFIG.itemHeight) + 'px';
+      card.style.left = '0';
+      card.style.right = '0';
+      card.innerHTML = createNodeCard(node);
+      container.appendChild(card);
+    } else {
+      // 更新位置和状态
+      card.style.top = (i * VIRTUAL_SCROLL_CONFIG.itemHeight) + 'px';
+      updateNodeCard(card, node);
+    }
+  }
+  
+  // 移除不可见的卡片
+  container.querySelectorAll('.node-card').forEach(card => {
+    const nodeId = card.getAttribute('data-node-id');
+    if (!visibleIds.has(nodeId)) {
+      card.remove();
+    }
+  });
+}
+
+/**
+ * 更新节点卡片内容
+ * @param {HTMLElement} card - 卡片元素
+ * @param {Object} node - 节点数据
+ */
+function updateNodeCard(card, node) {
+  // 更新状态类
+  card.classList.remove('online', 'offline');
+  card.classList.add(node.online ? 'online' : 'offline');
+  
+  // 更新状态指示器
+  const statusIndicator = card.querySelector('.status-indicator');
+  if (statusIndicator) {
+    statusIndicator.className = `status-indicator ${node.online ? 'online' : 'offline'}`;
+    statusIndicator.textContent = node.online ? '🟢' : '🔴';
+  }
+  
+  // 更新状态文本
+  const statusText = card.querySelector('.status-text');
+  if (statusText) {
+    statusText.textContent = node.online ? 'ONLINE' : 'OFFLINE';
+    statusText.className = `status-text ${node.online ? 'online' : 'offline'}`;
+  }
+  
+  // 更新响应时间
+  const responseTime = card.querySelector('.response-time');
+  if (responseTime && node.responseTime !== undefined) {
+    responseTime.textContent = `${node.responseTime}ms`;
+  }
+  
+  // 更新最后检查时间
+  const lastCheck = card.querySelector('.last-check');
+  if (lastCheck && node.lastCheck) {
+    lastCheck.textContent = formatLastCheck(node.lastCheck);
+  }
 }
 
 /**
@@ -1448,11 +1800,15 @@ function bindEvents() {
     });
   }
   
-  // 搜索输入框
+  // 搜索输入框（使用防抖优化）
   if (searchInput) {
-    searchInput.addEventListener('input', (e) => {
-      searchQuery = e.target.value;
+    const debouncedSearch = debounce((query) => {
+      searchQuery = query;
       renderNodes(currentNodes);
+    }, 300); // 300ms 防抖延迟
+    
+    searchInput.addEventListener('input', (e) => {
+      debouncedSearch(e.target.value);
     });
     
     // 支持 ESC 键清除搜索
@@ -1558,14 +1914,13 @@ function bindEvents() {
     }
   });
   
-  // 窗口大小改变时更新图表
-  window.addEventListener('resize', () => {
-    // 延迟一点执行，避免频繁触发
-    setTimeout(() => {
-      initResponseTimeChart();
-      updateResponseTimeChart();
-    }, 100);
-  });
+  // 窗口大小改变时更新图表（使用节流优化）
+  const throttledResize = throttle(() => {
+    initResponseTimeChart();
+    updateResponseTimeChart();
+  }, 250); // 250ms 节流
+  
+  window.addEventListener('resize', throttledResize, { passive: true });
   
   // ===== 告警管理相关事件 =====
   
@@ -2039,9 +2394,9 @@ function initParticles() {
   // 创建粒子
   createParticles();
   
-  // 绑定事件
-  window.addEventListener('resize', resizeCanvas);
-  window.addEventListener('mousemove', handleMouseMove);
+  // 绑定事件（使用节流优化 resize）
+  window.addEventListener('resize', throttle(resizeCanvas, 250), { passive: true });
+  window.addEventListener('mousemove', handleMouseMove, { passive: true });
   window.addEventListener('mouseout', () => {
     mouse.x = null;
     mouse.y = null;
@@ -2659,14 +3014,16 @@ function initConnections() {
   // 设置画布尺寸
   resizeConnectionCanvas();
   
-  // 监听窗口大小变化
-  window.addEventListener('resize', () => {
+  // 监听窗口大小变化（使用节流优化）
+  const throttledConnectionResize = throttle(() => {
     resizeConnectionCanvas();
     // 重绘连线
     if (currentNodes && currentNodes.length > 0) {
       drawConnections(currentNodes);
     }
-  });
+  }, 250);
+  
+  window.addEventListener('resize', throttledConnectionResize, { passive: true });
   
   console.log('🔗 CONNECTION LAYER INITIALIZED');
 }
