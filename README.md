@@ -359,11 +359,57 @@ curl -X POST http://localhost:3000/api/health-check
 
 欢迎提交 Issue 和 Pull Request！
 
+### 贡献流程
+
 1. Fork [本项目](https://github.com/Magic-KK/node-monitor)
 2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
+3. 提交更改（遵循下方的[提交规范](#-提交规范)）
 4. 推送到分支 (`git push origin feature/AmazingFeature`)
 5. 开启 [Pull Request](https://github.com/Magic-KK/node-monitor/pulls)
+
+### 📏 提交规范
+
+本项目遵循统一的 Git 提交格式，确保提交历史清晰可读：
+
+**基本格式：**
+```
+<emoji> <类型>: <简短描述>
+```
+
+**常用提交类型：**
+
+| Emoji | 类型 | 用途 | 示例 |
+|-------|------|------|------|
+| ✨ | feat | 新增功能 | `✨ feat: 新增节点响应时间图表` |
+| 🐛 | fix | 修复 bug | `🐛 fix: 修复离线状态显示错误` |
+| 🎨 | style | 样式优化 | `🎨 style(ui): 优化卡片悬浮动画` |
+| ⚡ | perf | 性能优化 | `⚡ perf: 优化健康检查接口性能` |
+| 📝 | docs | 文档更新 | `📝 docs: 更新安装说明` |
+| 🔧 | config | 配置修改 | `🔧 config: 更新飞书配置` |
+| ♻️ | refactor | 代码重构 | `♻️ refactor: 重构健康检查逻辑` |
+| 🚀 | init | 初始提交 | `🚀 init: 项目初始化` |
+| 📦 | deps | 依赖更新 | `📦 deps: 更新 express 版本` |
+| 🎉 | merge | 合并分支 | `🎉 merge: 合并 feature 分支` |
+
+**完整示例：**
+```bash
+# 新功能
+git commit -m "✨ feat: 新增暗色/亮色模式切换功能"
+
+# 修复 bug
+git commit -m "🐛 fix: 修复节点状态显示错误"
+
+# 界面优化
+git commit -m "🎨 style(ui): 优化卡片边框效果"
+
+# 性能优化
+git commit -m "⚡ perf: 优化接口响应速度"
+
+# 文档更新
+git commit -m "📝 docs: 更新 API 文档"
+```
+
+详细规范请查看 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 ---
 
