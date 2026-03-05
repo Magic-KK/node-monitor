@@ -186,6 +186,84 @@ let alertsConfig = {
 // 告警发送历史（用于冷却）
 const alertsHistory = [];
 
+// ===== 实时日志系统 =====
+// 内存日志缓冲区（保留最近 200 条）
+const LOG_BUFFER_SIZE = 200;
+const logBuffer = [];
+
+// 日志级别
+const LOG_LEVELS = {
+  INFO: 'INFO',
+  WARNING: 'WARNING',
+  ERROR: 'ERROR',
+  SUCCESS: 'SUCCESS'
+};
+
+/**
+ * 添加日志到缓冲区
+ * @param {string} level - 日志级别
+ * @param {string} message - 日志消息
+ * @param {string} [source] - 日志来源（可选）
+ */
+function addLog(level, message, source = 'SYSTEM') {
+  const logEntry = {
+    id: Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+    timestamp: new Date().toISOString(),
+    level: level,
+    message: message,
+    source: source
+  };
+  
+  logBuffer.push(logEntry);
+  
+  // 保持缓冲区大小限制
+  if (logBuffer.length > LOG_BUFFER_SIZE) {
+    logBuffer.shift();
+  }
+  
+  // 同时在控制台输出
+  const logPrefix = `[${new Date().toLocaleTimeString('zh-CN')}]`;
+  const logLevelColors = {
+    'INFO': '\x1b[36m',      // 青色
+    'WARNING': '\x1b[33m',   // 黄色
+    'ERROR': '\x1b[31m',     // 红色
+    'SUCCESS': '\x1b[32m'    // 绿色
+  };
+  const reset = '\x1b[0m';
+  const color = logLevelColors[level] || '';
+  
+  console.log(`${logPrefix} ${color}[${level}]${reset} ${message}`);
+}
+
+// 重载 console.log 来捕获日志（可选）
+const originalConsoleLog = console.log;
+const originalConsoleWarn = console.warn;
+const originalConsoleError = console.error;
+
+console.log = function(...args) {
+  const message = args.join(' ');
+  // 排除日志系统自身的输出，避免循环
+  if (!message.includes('[INFO]') && !message.includes('[WARNING]') && !message.includes('[ERROR]')) {
+    addLog(LOG_LEVELS.INFO, message, 'CONSOLE');
+  }
+  originalConsoleLog.apply(console, args);
+};
+
+console.warn = function(...args) {
+  const message = args.join(' ');
+  addLog(LOG_LEVELS.WARNING, message, 'CONSOLE');
+  originalConsoleWarn.apply(console, args);
+};
+
+console.error = function(...args) {
+  const message = args.join(' ');
+  addLog(LOG_LEVELS.ERROR, message, 'CONSOLE');
+  originalConsoleError.apply(console, args);
+};
+
+// 记录服务启动日志
+addLog(LOG_LEVELS.SUCCESS, '日志系统初始化完成', 'LOG_SYSTEM');
+
 // 初始化历史数据存储
 function initHistoryStorage() {
   try {
@@ -1514,6 +1592,69 @@ app.post('/api/alerts/history/clear', (req, res) => {
     res.status(500).json({
       success: false,
       error: '清除告警历史失败：' + err.message
+    });
+  }
+});
+
+/**
+ * API: 获取实时日志
+ * GET /api/logs?level=INFO&limit=50&source=SYSTEM
+ */
+app.get('/api/logs', (req, res) => {
+  try {
+    const { level, limit = 50, source } = req.query;
+    const maxLimit = Math.min(parseInt(limit) || 50, 200);
+    
+    // 过滤日志
+    let filteredLogs = logBuffer;
+    
+    if (level) {
+      filteredLogs = filteredLogs.filter(log => log.level === level);
+    }
+    
+    if (source) {
+      filteredLogs = filteredLogs.filter(log => log.source === source);
+    }
+    
+    // 返回最近的日志（倒序）
+    const logs = filteredLogs.slice(-maxLimit).reverse();
+    
+    res.json({
+      success: true,
+      data: {
+        logs,
+        total: filteredLogs.length,
+        limit: maxLimit,
+        bufferSize: logBuffer.length
+      }
+    });
+  } catch (err) {
+    console.error('❌ 获取日志失败:', err.message);
+    res.status(500).json({
+      success: false,
+      error: '获取日志失败：' + err.message
+    });
+  }
+});
+
+/**
+ * API: 清除日志缓冲区
+ * POST /api/logs/clear
+ */
+app.post('/api/logs/clear', (req, res) => {
+  try {
+    logBuffer.length = 0; // 清空数组
+    addLog(LOG_LEVELS.SUCCESS, '日志缓冲区已清除', 'API');
+    
+    res.json({
+      success: true,
+      message: '日志缓冲区已清除'
+    });
+  } catch (err) {
+    console.error('❌ 清除日志失败:', err.message);
+    res.status(500).json({
+      success: false,
+      error: '清除日志失败：' + err.message
     });
   }
 });

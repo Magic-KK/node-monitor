@@ -150,6 +150,10 @@
         <span class="btn-icon">🚨</span>
         告警管理
       </button>
+      <button id="logsBtn" class="btn btn-secondary">
+        <span class="btn-icon">📋</span>
+        实时日志
+      </button>
       <button id="settingsBtn" class="btn btn-info">
         <span class="btn-icon">⚙️</span>
         配置管理
@@ -214,7 +218,7 @@
         <a href="https://github.com/Magic-KK/node-monitor" target="_blank">GITHUB</a>
       </p>
       <p style="margin-top: 10px; font-size: 0.75rem; color: var(--text-muted);">
-        SYSTEM VERSION 1.12.0 // NODE GROUPING
+        SYSTEM VERSION 1.13.0 // REAL-TIME LOGS
       </p>
     </footer>
   </div>
@@ -396,6 +400,64 @@
         </div>
 
         <div id="alertsHistoryMessage" class="message-box" style="display: none;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 实时日志流弹窗 -->
+  <div id="logsModal" class="modal">
+    <div class="modal-content modal-content-large">
+      <div class="modal-header">
+        <h2>📋 实时日志流</h2>
+        <button id="closeLogsModal" class="modal-close" title="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <!-- 日志控制栏 -->
+        <div class="logs-controls">
+          <div class="logs-filters">
+            <select id="logLevelFilter" class="form-select">
+              <option value="all">全部级别</option>
+              <option value="SUCCESS">✅ 成功</option>
+              <option value="INFO">ℹ️ 信息</option>
+              <option value="WARNING">⚠️ 警告</option>
+              <option value="ERROR">❌ 错误</option>
+            </select>
+            <select id="logSourceFilter" class="form-select">
+              <option value="all">全部来源</option>
+              <option value="SYSTEM">系统</option>
+              <option value="HEALTH_CHECK">健康检查</option>
+              <option value="API">API</option>
+              <option value="CONSOLE">控制台</option>
+            </select>
+          </div>
+          <div class="logs-actions">
+            <label class="checkbox-label">
+              <input type="checkbox" id="autoScrollLogs" checked>
+              <span>自动滚动</span>
+            </label>
+            <button id="refreshLogsBtn" class="btn btn-primary">
+              <span class="btn-icon">🔄</span>
+              刷新
+            </button>
+            <button id="clearLogsBtn" class="btn btn-danger">
+              <span class="btn-icon">🗑️</span>
+              清除
+            </button>
+          </div>
+        </div>
+
+        <!-- 日志列表 -->
+        <div class="logs-container" id="logsContainer">
+          <div class="loading">
+            <div class="spinner"></div>
+            <p>加载日志...</p>
+          </div>
+        </div>
+
+        <!-- 日志统计 -->
+        <div class="logs-stats" id="logsStats">
+          <span>共 <strong id="logTotalCount">0</strong> 条日志 | 缓冲区：<strong id="logBufferSize">0</strong></span>
+        </div>
       </div>
     </div>
   </div>

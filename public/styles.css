@@ -2477,3 +2477,170 @@ body::after {
 [data-theme="light"] .alerts-table tbody tr:hover {
   background: rgba(0, 139, 163, 0.05);
 }
+
+/* ===== 实时日志流样式 ===== */
+.logs-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 15px;
+  background: var(--bg-secondary);
+  border-radius: var(--border-radius-lg);
+  border: 1px solid var(--border-color);
+}
+
+.logs-filters {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+.logs-filters .form-select {
+  min-width: 140px;
+}
+
+.logs-actions {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+.logs-container {
+  background: var(--bg-dark);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-lg);
+  height: 500px;
+  overflow-y: auto;
+  font-family: 'Courier New', 'Consolas', monospace;
+  font-size: 0.85rem;
+  padding: 15px;
+  scroll-behavior: smooth;
+}
+
+.log-entry {
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  border-radius: 4px;
+  border-left: 3px solid;
+  background: rgba(18, 18, 42, 0.5);
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.log-entry.log-info {
+  border-left-color: var(--info);
+  background: rgba(0, 245, 255, 0.05);
+}
+
+.log-entry.log-success {
+  border-left-color: var(--success);
+  background: rgba(0, 255, 136, 0.05);
+}
+
+.log-entry.log-warning {
+  border-left-color: var(--warning);
+  background: rgba(252, 238, 10, 0.05);
+}
+
+.log-entry.log-error {
+  border-left-color: var(--danger);
+  background: rgba(255, 0, 110, 0.05);
+}
+
+.log-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.log-timestamp {
+  font-family: 'Courier New', 'Consolas', monospace;
+  color: var(--text-muted);
+}
+
+.log-level {
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-weight: 600;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+}
+
+.log-level-info {
+  background: rgba(0, 245, 255, 0.2);
+  color: var(--info);
+}
+
+.log-level-success {
+  background: rgba(0, 255, 136, 0.2);
+  color: var(--success);
+}
+
+.log-level-warning {
+  background: rgba(252, 238, 10, 0.2);
+  color: var(--warning);
+}
+
+.log-level-error {
+  background: rgba(255, 0, 110, 0.2);
+  color: var(--danger);
+}
+
+.log-source {
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 0.7rem;
+  background: rgba(185, 38, 255, 0.2);
+  color: var(--neon-purple);
+}
+
+.log-message {
+  color: var(--text-primary);
+  word-break: break-word;
+  line-height: 1.5;
+}
+
+.logs-stats {
+  margin-top: 15px;
+  padding: 10px 15px;
+  background: var(--bg-secondary);
+  border-radius: var(--border-radius-lg);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  text-align: right;
+}
+
+.logs-stats strong {
+  color: var(--neon-cyan);
+}
+
+/* 亮色模式适配 */
+[data-theme="light"] .logs-container {
+  background: #f8f9fa;
+}
+
+[data-theme="light"] .log-entry {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+[data-theme="light"] .logs-controls {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+[data-theme="light"] .logs-stats {
+  background: rgba(255, 255, 255, 0.5);
+}

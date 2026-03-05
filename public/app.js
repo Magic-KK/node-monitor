@@ -975,6 +975,54 @@ function bindEvents() {
     alertsBtn.addEventListener('click', openAlertsModal);
   }
   
+  // ===== 实时日志流相关事件 =====
+  
+  // 日志按钮
+  const logsBtn = document.getElementById('logsBtn');
+  if (logsBtn) {
+    logsBtn.addEventListener('click', openLogsModal);
+  }
+  
+  // 关闭日志弹窗按钮
+  const closeLogsModal = document.getElementById('closeLogsModal');
+  if (closeLogsModal) {
+    closeLogsModal.addEventListener('click', closeLogsModalFunc);
+  }
+  
+  // 刷新日志按钮
+  const refreshLogsBtn = document.getElementById('refreshLogsBtn');
+  if (refreshLogsBtn) {
+    refreshLogsBtn.addEventListener('click', loadLogs);
+  }
+  
+  // 清除日志按钮
+  const clearLogsBtn = document.getElementById('clearLogsBtn');
+  if (clearLogsBtn) {
+    clearLogsBtn.addEventListener('click', clearLogs);
+  }
+  
+  // 日志级别过滤
+  const logLevelFilter = document.getElementById('logLevelFilter');
+  if (logLevelFilter) {
+    logLevelFilter.addEventListener('change', loadLogs);
+  }
+  
+  // 日志来源过滤
+  const logSourceFilter = document.getElementById('logSourceFilter');
+  if (logSourceFilter) {
+    logSourceFilter.addEventListener('change', loadLogs);
+  }
+  
+  // 自动滚动开关
+  const autoScrollLogs = document.getElementById('autoScrollLogs');
+  if (autoScrollLogs) {
+    autoScrollLogs.addEventListener('change', () => {
+      if (autoScrollLogs.checked) {
+        scrollToBottom();
+      }
+    });
+  }
+  
   // ===== 配置管理相关事件 =====
   
   // 配置管理按钮
@@ -1104,6 +1152,17 @@ function showError(message) {
   
   // 3 秒后移除
   setTimeout(() => errorEl.remove(), 3000);
+}
+
+/**
+ * HTML 转义工具函数
+ * @param {string} text - 需要转义的文本
+ * @returns {string} 转义后的文本
+ */
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 }
 
 /**
@@ -2652,6 +2711,158 @@ async function loadHistoryRecords() {
   } catch (err) {
     console.error('❌ 加载历史记录失败:', err);
     tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #ff4757;">加载失败</td></tr>';
+  }
+}
+
+// ===== 实时日志流功能 =====
+
+// 日志轮询定时器
+let logsPollingInterval = null;
+
+/**
+ * 打开日志弹窗
+ */
+async function openLogsModal() {
+  const modal = document.getElementById('logsModal');
+  if (!modal) return;
+  
+  modal.style.display = 'flex';
+  
+  // 加载日志
+  await loadLogs();
+  
+  // 启动轮询（每 3 秒刷新一次）
+  if (logsPollingInterval) {
+    clearInterval(logsPollingInterval);
+  }
+  logsPollingInterval = setInterval(loadLogs, 3000);
+}
+
+/**
+ * 关闭日志弹窗
+ */
+function closeLogsModalFunc() {
+  const modal = document.getElementById('logsModal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+  
+  // 停止轮询
+  if (logsPollingInterval) {
+    clearInterval(logsPollingInterval);
+    logsPollingInterval = null;
+  }
+}
+
+/**
+ * 加载日志
+ */
+async function loadLogs() {
+  try {
+    const levelFilter = document.getElementById('logLevelFilter');
+    const sourceFilter = document.getElementById('logSourceFilter');
+    const logsContainer = document.getElementById('logsContainer');
+    const logTotalCount = document.getElementById('logTotalCount');
+    const logBufferSize = document.getElementById('logBufferSize');
+    
+    if (!logsContainer) return;
+    
+    // 构建查询参数
+    let url = '/api/logs?limit=100';
+    if (levelFilter && levelFilter.value !== 'all') {
+      url += `&level=${levelFilter.value}`;
+    }
+    if (sourceFilter && sourceFilter.value !== 'all') {
+      url += `&source=${sourceFilter.value}`;
+    }
+    
+    const response = await fetch(url);
+    const result = await response.json();
+    
+    if (result.success) {
+      const logs = result.data.logs || [];
+      
+      // 更新统计
+      if (logTotalCount) logTotalCount.textContent = result.data.total;
+      if (logBufferSize) logBufferSize.textContent = result.data.bufferSize;
+      
+      // 渲染日志
+      if (logs.length === 0) {
+        logsContainer.innerHTML = `
+          <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+            <p style="font-size: 2rem; margin-bottom: 10px;">📭</p>
+            <p>暂无日志</p>
+          </div>
+        `;
+      } else {
+        logsContainer.innerHTML = logs.map(log => {
+          const levelClass = `log-${log.level.toLowerCase()}`;
+          const time = new Date(log.timestamp).toLocaleTimeString('zh-CN');
+          
+          return `
+            <div class="log-entry ${levelClass}">
+              <div class="log-header">
+                <span class="log-timestamp">${time}</span>
+                <div>
+                  <span class="log-level log-level-${log.level.toLowerCase()}">${log.level}</span>
+                  <span class="log-source">${log.source}</span>
+                </div>
+              </div>
+              <div class="log-message">${escapeHtml(log.message)}</div>
+            </div>
+          `;
+        }).join('');
+        
+        // 自动滚动到底部
+        const autoScroll = document.getElementById('autoScrollLogs');
+        if (autoScroll && autoScroll.checked) {
+          scrollToBottom();
+        }
+      }
+    }
+  } catch (err) {
+    console.error('❌ 加载日志失败:', err);
+    const logsContainer = document.getElementById('logsContainer');
+    if (logsContainer) {
+      logsContainer.innerHTML = `
+        <div style="text-align: center; padding: 40px; color: var(--danger);">
+          <p>加载日志失败</p>
+          <p style="font-size: 0.85rem; margin-top: 10px;">${err.message}</p>
+        </div>
+      `;
+    }
+  }
+}
+
+/**
+ * 清除日志
+ */
+async function clearLogs() {
+  if (!confirm('确定要清除日志缓冲区吗？')) return;
+  
+  try {
+    const response = await fetch('/api/logs/clear', { method: 'POST' });
+    const result = await response.json();
+    
+    if (result.success) {
+      showNotification('日志已清除', 'success');
+      await loadLogs();
+    } else {
+      showNotification('清除失败：' + result.error, 'error');
+    }
+  } catch (err) {
+    console.error('❌ 清除日志失败:', err);
+    showNotification('清除失败：' + err.message, 'error');
+  }
+}
+
+/**
+ * 滚动到底部
+ */
+function scrollToBottom() {
+  const logsContainer = document.getElementById('logsContainer');
+  if (logsContainer) {
+    logsContainer.scrollTop = logsContainer.scrollHeight;
   }
 }
 
