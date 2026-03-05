@@ -35,6 +35,7 @@ let autoRefreshInterval = null;
 let isRefreshing = false;
 let currentNodes = []; // 缓存当前节点数据用于搜索过滤
 let searchQuery = ''; // 当前搜索关键词
+let selectedGroup = 'all'; // 当前选中的分组
 
 // DOM 元素
 const nodesGrid = document.getElementById('nodesGrid');
@@ -49,6 +50,7 @@ const onlineNodesEl = document.getElementById('onlineNodes');
 const offlineNodesEl = document.getElementById('offlineNodes');
 const searchInput = document.getElementById('searchInput');
 const clearSearchBtn = document.getElementById('clearSearchBtn');
+const groupFilter = document.getElementById('groupFilter');
 
 // 系统指标元素
 const cpuUsageEl = document.getElementById('cpuUsage');
@@ -363,6 +365,7 @@ async function fetchStatus() {
     
     if (result.success) {
       renderNodes(result.data.nodes);
+      updateGroupFilter(result.data.nodes); // 更新分组筛选器
       updateStats(result.data);
       updateLastUpdateTime(result.data.lastUpdate);
       // 更新响应时间历史
@@ -400,6 +403,7 @@ async function runHealthCheck() {
     
     if (result.success) {
       renderNodes(result.data.nodes);
+      updateGroupFilter(result.data.nodes); // 更新分组筛选器
       updateStats(result.data);
       updateLastUpdateTime(result.data.checkTime);
       
@@ -445,8 +449,9 @@ function renderNodes(nodes) {
   // 缓存当前节点数据
   currentNodes = nodes;
   
-  // 如果有搜索关键词，先过滤
-  const filteredNodes = filterNodes(nodes, searchQuery);
+  // 先按组过滤，再按搜索关键词过滤
+  const groupedNodes = filterNodesByGroup(nodes, selectedGroup);
+  const filteredNodes = filterNodes(groupedNodes, searchQuery);
   
   // 生成 HTML
   if (filteredNodes.length === 0) {
@@ -473,6 +478,61 @@ function renderNodes(nodes) {
   setTimeout(() => {
     init3DCards();
   }, 150);
+}
+
+/**
+ * 过滤节点（根据分组）
+ * @param {Array} nodes - 节点数组
+ * @param {string} group - 选中的分组（'all' 表示全部）
+ * @returns {Array} 过滤后的节点数组
+ */
+function filterNodesByGroup(nodes, group) {
+  if (!group || group === 'all') {
+    return nodes;
+  }
+  
+  return nodes.filter(node => {
+    // 支持 group 字段或 workspace 字段作为分组依据
+    const nodeGroup = node.group || node.workspace || 'default';
+    return nodeGroup === group;
+  });
+}
+
+/**
+ * 更新分组筛选器选项
+ * @param {Array} nodes - 节点数组
+ */
+function updateGroupFilter(nodes) {
+  if (!groupFilter) return;
+  
+  // 收集所有分组
+  const groups = new Set();
+  nodes.forEach(node => {
+    const group = node.group || node.workspace || 'default';
+    groups.add(group);
+  });
+  
+  // 保存当前选中的分组
+  const currentSelection = selectedGroup;
+  
+  // 清空现有选项（保留"全部"选项）
+  groupFilter.innerHTML = '<option value="all">ALL GROUPS</option>';
+  
+  // 添加分组选项
+  Array.from(groups).sort().forEach(group => {
+    const option = document.createElement('option');
+    option.value = group;
+    option.textContent = group.toUpperCase();
+    groupFilter.appendChild(option);
+  });
+  
+  // 恢复之前的选择（如果该分组仍然存在）
+  if (groups.has(currentSelection)) {
+    groupFilter.value = currentSelection;
+  } else {
+    selectedGroup = 'all';
+    groupFilter.value = 'all';
+  }
 }
 
 /**
@@ -830,6 +890,17 @@ function bindEvents() {
   // 清除搜索按钮
   if (clearSearchBtn) {
     clearSearchBtn.addEventListener('click', clearSearch);
+  }
+  
+  // 分组筛选器
+  if (groupFilter) {
+    groupFilter.addEventListener('change', (e) => {
+      selectedGroup = e.target.value;
+      renderNodes(currentNodes);
+      
+      const groupName = selectedGroup === 'all' ? 'ALL GROUPS' : selectedGroup;
+      showNotification(`FILTER: ${groupName}`);
+    });
   }
   
   // 节点卡片点击事件（事件委托）
