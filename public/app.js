@@ -38,6 +38,8 @@ let searchQuery = ''; // 当前搜索关键词
 let selectedGroup = 'all'; // 当前选中的分组
 let favorites = new Set(); // 收藏的节点 ID 集合
 let showFavoritesOnly = false; // 是否只显示收藏节点
+let nodeOrder = []; // 自定义节点排序顺序
+let draggedNode = null; // 当前拖拽的节点
 
 // DOM 元素
 const nodesGrid = document.getElementById('nodesGrid');
@@ -381,6 +383,9 @@ async function init() {
   // 初始化收藏功能
   initFavorites();
   
+  // 初始化节点排序
+  initNodeOrder();
+  
   // 加载配置
   updateLoadingProgress(20, 'LOADING CONFIGURATION...');
   await loadConfig();
@@ -582,6 +587,79 @@ function filterFavorites(nodes) {
   }
   
   return nodes.filter(node => favorites.has(node.id));
+}
+
+/**
+ * 初始化节点排序顺序
+ */
+function initNodeOrder() {
+  // 从 localStorage 读取自定义排序
+  const savedOrder = localStorage.getItem('nodeOrder');
+  if (savedOrder) {
+    try {
+      nodeOrder = JSON.parse(savedOrder);
+      console.log('📋 NODE ORDER LOADED:', nodeOrder.length, 'nodes');
+    } catch (err) {
+      console.error('⚠️ 读取节点排序失败:', err);
+      nodeOrder = [];
+    }
+  } else {
+    nodeOrder = [];
+  }
+  console.log('📋 NODE ORDER SYSTEM INITIALIZED');
+}
+
+/**
+ * 保存节点排序顺序到 localStorage
+ */
+function saveNodeOrder() {
+  try {
+    localStorage.setItem('nodeOrder', JSON.stringify(nodeOrder));
+    console.log('💾 NODE ORDER SAVED:', nodeOrder.length, 'nodes');
+  } catch (err) {
+    console.error('⚠️ 保存节点排序失败:', err);
+  }
+}
+
+/**
+ * 应用自定义排序到节点数组
+ * @param {Array} nodes - 节点数组
+ * @returns {Array} 排序后的节点数组
+ */
+function applyNodeOrder(nodes) {
+  if (!nodeOrder || nodeOrder.length === 0) {
+    return nodes; // 没有自定义排序，返回原顺序
+  }
+  
+  // 创建排序映射
+  const orderMap = new Map();
+  nodeOrder.forEach((nodeId, index) => {
+    orderMap.set(nodeId, index);
+  });
+  
+  // 复制数组并排序
+  return [...nodes].sort((a, b) => {
+    const aIndex = orderMap.has(a.id) ? orderMap.get(a.id) : Infinity;
+    const bIndex = orderMap.has(b.id) ? orderMap.get(b.id) : Infinity;
+    
+    // 已排序的节点在前，未排序的在后（保持原有顺序）
+    if (aIndex === Infinity && bIndex === Infinity) {
+      return 0; // 保持原有相对顺序
+    }
+    if (aIndex === Infinity) return 1;
+    if (bIndex === Infinity) return -1;
+    return aIndex - bIndex;
+  });
+}
+
+/**
+ * 重置节点排序为默认顺序
+ */
+function resetNodeOrder() {
+  nodeOrder = [];
+  saveNodeOrder();
+  renderNodes(currentNodes);
+  showNotification(t('notifyOrderReset') || '节点排序已重置');
 }
 
 /**
@@ -852,10 +930,11 @@ function renderNodes(nodes) {
   // 缓存当前节点数据
   currentNodes = nodes;
   
-  // 过滤链：分组 -> 收藏 -> 搜索
+  // 过滤链：分组 -> 收藏 -> 搜索 -> 排序
   const groupedNodes = filterNodesByGroup(nodes, selectedGroup);
   const favoriteFilteredNodes = filterFavorites(groupedNodes);
   const filteredNodes = filterNodes(favoriteFilteredNodes, searchQuery);
+  const sortedNodes = applyNodeOrder(filteredNodes); // 应用自定义排序
   
   // 生成 HTML
   if (filteredNodes.length === 0) {
@@ -871,7 +950,7 @@ function renderNodes(nodes) {
       </div>
     `;
   } else {
-    nodesGrid.innerHTML = filteredNodes.map(node => createNodeCard(node)).join('');
+    nodesGrid.innerHTML = sortedNodes.map(node => createNodeCard(node)).join('');
   }
   
   // 更新搜索按钮状态
@@ -1033,7 +1112,16 @@ function createNodeCard(node) {
   const favoriteIcon = isFavorited ? '⭐' : '☆';
   
   return `
-    <div class="node-card ${statusClass}" data-node-id="${node.id}" style="cursor: pointer;">
+    <div class="node-card ${statusClass} draggable-card" 
+         data-node-id="${node.id}" 
+         draggable="true"
+         style="cursor: pointer;"
+         ondragstart="handleDragStart(event, '${node.id}')"
+         ondragover="handleDragOver(event)"
+         ondrop="handleDrop(event, '${node.id}')"
+         ondragend="handleDragEnd(event)"
+         ondragenter="handleDragEnter(event)"
+         ondragleave="handleDragLeave(event)">
       <div class="node-header">
         <span class="node-emoji">${node.emoji || '📡'}</span>
         <div class="node-info">
@@ -1359,7 +1447,6 @@ function bindEvents() {
       showNotification(t('notifyLanguageChanged', { lang: langNames[lang] || lang }));
     });
   }
-  }
   
   // 搜索输入框
   if (searchInput) {
@@ -1667,9 +1754,9 @@ function bindEvents() {
   }
   
   // 关闭配置弹窗按钮
-  const closeSettingsModal = document.getElementById('closeSettingsModal');
-  if (closeSettingsModal) {
-    closeSettingsModal.addEventListener('click', closeSettingsModal);
+  const closeSettingsModalBtn = document.getElementById('closeSettingsModal');
+  if (closeSettingsModalBtn) {
+    closeSettingsModalBtn.addEventListener('click', closeSettingsModalFunc);
   }
   
   // 取消配置按钮
@@ -5191,3 +5278,151 @@ document.addEventListener('DOMContentLoaded', init);
 
 // 请求通知权限
 requestNotificationPermission();
+
+// ===== 拖拽排序功能 =====
+
+/**
+ * 处理拖拽开始
+ * @param {DragEvent} event - 拖拽事件
+ * @param {string} nodeId - 节点 ID
+ */
+function handleDragStart(event, nodeId) {
+  draggedNode = nodeId;
+  event.target.classList.add('dragging');
+  event.dataTransfer.effectAllowed = 'move';
+  event.dataTransfer.setData('text/plain', nodeId);
+  
+  // 设置拖拽图像（使用半透明效果）
+  const dragImage = event.target.cloneNode(true);
+  dragImage.style.position = 'absolute';
+  dragImage.style.top = '-1000px';
+  dragImage.style.opacity = '0.5';
+  document.body.appendChild(dragImage);
+  event.dataTransfer.setDragImage(dragImage, 0, 0);
+  
+  // 清理临时元素
+  setTimeout(() => {
+    dragImage.remove();
+  }, 0);
+  
+  console.log('🖐️ DRAG START:', nodeId);
+}
+
+/**
+ * 处理拖拽经过
+ * @param {DragEvent} event - 拖拽事件
+ */
+function handleDragOver(event) {
+  event.preventDefault();
+  event.dataTransfer.dropEffect = 'move';
+  
+  const card = event.target.closest('.draggable-card');
+  if (card && card.dataset.nodeId !== draggedNode) {
+    card.classList.add('drag-over');
+  }
+}
+
+/**
+ * 处理拖拽进入
+ * @param {DragEvent} event - 拖拽事件
+ */
+function handleDragEnter(event) {
+  event.preventDefault();
+  const card = event.target.closest('.draggable-card');
+  if (card && card.dataset.nodeId !== draggedNode) {
+    card.classList.add('drag-over');
+  }
+}
+
+/**
+ * 处理拖拽离开
+ * @param {DragEvent} event - 拖拽事件
+ */
+function handleDragLeave(event) {
+  const card = event.target.closest('.draggable-card');
+  if (card) {
+    card.classList.remove('drag-over');
+  }
+}
+
+/**
+ * 处理拖拽放下
+ * @param {DragEvent} event - 拖拽事件
+ * @param {string} targetNodeId - 目标节点 ID
+ */
+function handleDrop(event, targetNodeId) {
+  event.preventDefault();
+  
+  const card = event.target.closest('.draggable-card');
+  if (card) {
+    card.classList.remove('drag-over');
+  }
+  
+  if (!draggedNode || draggedNode === targetNodeId) {
+    return;
+  }
+  
+  console.log('📥 DROP:', draggedNode, '->', targetNodeId);
+  
+  // 交换节点顺序
+  swapNodeOrder(draggedNode, targetNodeId);
+  
+  // 清除拖拽状态
+  draggedNode = null;
+}
+
+/**
+ * 处理拖拽结束
+ * @param {DragEvent} event - 拖拽事件
+ */
+function handleDragEnd(event) {
+  event.target.classList.remove('dragging');
+  
+  // 清除所有 drag-over 状态
+  document.querySelectorAll('.drag-over').forEach(el => {
+    el.classList.remove('drag-over');
+  });
+  
+  draggedNode = null;
+  console.log('🖐️ DRAG END');
+}
+
+/**
+ * 交换两个节点的顺序
+ * @param {string} nodeId1 - 节点 ID 1
+ * @param {string} nodeId2 - 节点 ID 2
+ */
+function swapNodeOrder(nodeId1, nodeId2) {
+  // 确保两个节点都在排序数组中
+  if (!nodeOrder.includes(nodeId1)) {
+    nodeOrder.push(nodeId1);
+  }
+  if (!nodeOrder.includes(nodeId2)) {
+    nodeOrder.push(nodeId2);
+  }
+  
+  // 获取当前索引
+  const index1 = nodeOrder.indexOf(nodeId1);
+  const index2 = nodeOrder.indexOf(nodeId2);
+  
+  // 交换位置
+  nodeOrder[index1] = nodeId2;
+  nodeOrder[index2] = nodeId1;
+  
+  // 保存排序
+  saveNodeOrder();
+  
+  // 重新渲染
+  renderNodes(currentNodes);
+  
+  // 播放音效
+  playSound('success');
+  
+  // 显示提示
+  showNotification(t('notifyNodeReordered') || '节点顺序已调整');
+}
+
+/**
+ * 重置节点排序顺序（添加到全局作用域）
+ */
+window.resetNodeOrder = resetNodeOrder;

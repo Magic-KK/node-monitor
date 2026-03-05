@@ -3894,4 +3894,114 @@ body::after {
 [data-theme="light"] .report-nodes-table th {
   background: #f0f9ff;
 }
+
+/* ===== 拖拽排序样式 ===== */
+
+.draggable-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.draggable-card.dragging {
+  opacity: 0.5;
+  transform: scale(1.02);
+  box-shadow: 0 10px 40px rgba(0, 245, 255, 0.4);
+  z-index: 1000;
+}
+
+.draggable-card.drag-over {
+  transform: scale(1.05);
+  box-shadow: 0 0 20px rgba(0, 245, 255, 0.6),
+              0 0 40px rgba(185, 38, 255, 0.3);
+  border: 2px dashed var(--neon-blue);
+}
+
+.draggable-card.drag-over::before {
+  content: '📍 DROP HERE';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 245, 255, 0.9);
+  color: #000;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 0.9rem;
+  letter-spacing: 1px;
+  z-index: 1001;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: translate(-50%, -50%) scale(1.05);
+  }
+}
+
+/* 拖拽提示 */
+.drag-hint {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 8px;
+  box-shadow: 0 5px 20px rgba(0, 245, 255, 0.4);
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  z-index: 10000;
+  animation: slideInRight 0.3s ease-out;
+  pointer-events: none;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* 亮色模式适配 */
+[data-theme="light"] .draggable-card.drag-over {
+  box-shadow: 0 0 20px rgba(0, 139, 163, 0.4),
+              0 0 40px rgba(139, 38, 217, 0.2);
+  border: 2px dashed #008ba3;
+}
+
+[data-theme="light"] .draggable-card.drag-over::before {
+  background: rgba(0, 139, 163, 0.9);
+}
+
+/* 科幻主题适配 */
+[data-theme="scifi"] .draggable-card.drag-over {
+  box-shadow: 0 0 20px rgba(0, 191, 255, 0.6),
+              0 0 40px rgba(0, 150, 200, 0.3);
+  border: 2px dashed #00bfff;
+}
+
+[data-theme="scifi"] .draggable-card.drag-over::before {
+  background: rgba(0, 191, 255, 0.9);
+}
+
+/* 极简主题适配 */
+[data-theme="minimal"] .draggable-card.drag-over {
+  box-shadow: 0 0 20px rgba(100, 100, 100, 0.3);
+  border: 2px dashed #666;
+}
+
+[data-theme="minimal"] .draggable-card.drag-over::before {
+  background: rgba(100, 100, 100, 0.9);
+  color: #fff;
+}
 }
