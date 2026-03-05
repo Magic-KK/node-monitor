@@ -673,6 +673,14 @@ body::after {
   box-shadow: 0 4px 20px rgba(0, 139, 163, 0.2);
 }
 
+/* 音效开关 */
+.sound-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: 20px;
+}
+
 /* ===== 节点网格 ===== */
 .nodes-grid {
   display: grid;

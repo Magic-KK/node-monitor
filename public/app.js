@@ -75,6 +75,23 @@ let connectionCtx = null;
 // 当前选中的节点
 let selectedNode = null;
 
+// 音效系统
+const soundToggle = document.getElementById('soundToggle');
+let soundEnabled = true;
+let audioContext = null;
+
+// 音效配置
+const SOUND_CONFIG = {
+  volume: 0.3, // 主音量
+  sounds: {
+    refresh: { freq: 880, duration: 0.1, type: 'sine' }, // 刷新完成 - 高音
+    online: { freq: 660, duration: 0.15, type: 'sine' }, // 节点上线 - 中音
+    offline: { freq: 220, duration: 0.2, type: 'sawtooth' }, // 节点离线 - 低音
+    error: { freq: 150, duration: 0.3, type: 'sawtooth' }, // 错误 - 低沉
+    success: { freq: 1200, duration: 0.1, type: 'triangle' } // 成功 - 清脆
+  }
+};
+
 /**
  * 初始化应用
  */
@@ -93,6 +110,9 @@ async function init() {
   
   // 初始化主题
   initTheme();
+  
+  // 初始化音效
+  initSound();
   
   // 加载配置
   await loadConfig();
@@ -119,6 +139,88 @@ function initTheme() {
   const savedTheme = localStorage.getItem('theme') || 'dark';
   setTheme(savedTheme);
   console.log('🎨 THEME INITIALIZED:', savedTheme);
+}
+
+/**
+ * 初始化音效系统
+ */
+function initSound() {
+  // 从 localStorage 读取音效设置
+  const savedSound = localStorage.getItem('soundEnabled');
+  if (savedSound !== null) {
+    soundEnabled = savedSound === 'true';
+    if (soundToggle) {
+      soundToggle.checked = soundEnabled;
+    }
+  }
+  console.log('🔊 SOUND INITIALIZED:', soundEnabled ? 'ENABLED' : 'DISABLED');
+}
+
+/**
+ * 初始化音频上下文（用户交互后调用）
+ */
+function initAudioContext() {
+  if (!audioContext) {
+    try {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      console.log('🎵 AUDIO CONTEXT INITIALIZED');
+    } catch (err) {
+      console.warn('⚠️ AUDIO CONTEXT FAILED:', err.message);
+    }
+  }
+}
+
+/**
+ * 播放音效
+ * @param {string} soundName - 音效名称 (refresh, online, offline, error, success)
+ */
+function playSound(soundName) {
+  if (!soundEnabled) return;
+  
+  // 初始化音频上下文（如果需要）
+  if (!audioContext) {
+    initAudioContext();
+  }
+  
+  if (!audioContext || !SOUND_CONFIG.sounds[soundName]) {
+    console.warn('⚠️ Cannot play sound:', soundName);
+    return;
+  }
+  
+  const sound = SOUND_CONFIG.sounds[soundName];
+  const oscillator = audioContext.createOscillator();
+  const gainNode = audioContext.createGain();
+  
+  // 连接节点
+  oscillator.connect(gainNode);
+  gainNode.connect(audioContext.destination);
+  
+  // 设置参数
+  oscillator.type = sound.type;
+  oscillator.frequency.setValueAtTime(sound.freq, audioContext.currentTime);
+  
+  // 音量包络（避免爆音）
+  gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+  gainNode.gain.linearRampToValueAtTime(SOUND_CONFIG.volume, audioContext.currentTime + 0.01);
+  gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + sound.duration);
+  
+  // 播放
+  oscillator.start(audioContext.currentTime);
+  oscillator.stop(audioContext.currentTime + sound.duration);
+  
+  console.log('🔊 PLAYED SOUND:', soundName);
+}
+
+/**
+ * 播放节点状态变化音效
+ * @param {boolean} isOnline - 是否在线
+ */
+function playNodeStatusSound(isOnline) {
+  if (isOnline) {
+    playSound('online');
+  } else {
+    playSound('offline');
+  }
 }
 
 /**
@@ -200,8 +302,11 @@ async function fetchStatus() {
       updateResponseTimeHistory(result.data.nodes);
       // 同时更新系统指标
       fetchSystemMetrics();
+      // 播放刷新完成音效
+      playSound('refresh');
     } else {
       showError('SYSTEM ERROR: ' + result.error);
+      playSound('error');
     }
   } catch (err) {
     console.error('⚠️ STATUS FETCH FAILED:', err);
@@ -233,8 +338,11 @@ async function runHealthCheck() {
       
       // 显示成功提示
       showNotification(`SCAN COMPLETE: ${result.data.onlineCount}/${result.data.configuredCount} NODES ONLINE`);
+      // 播放成功音效
+      playSound('success');
     } else {
       showError('SCAN FAILED: ' + result.error);
+      playSound('error');
     }
   } catch (err) {
     console.error('⚠️ HEALTH CHECK FAILED:', err);
@@ -254,6 +362,17 @@ function renderNodes(nodes) {
   if (!config || !config.nodes) {
     nodesGrid.innerHTML = '<div class="error-message">SYSTEM ERROR: CONFIGURATION NOT LOADED</div>';
     return;
+  }
+  
+  // 检测节点状态变化并播放音效
+  if (currentNodes && currentNodes.length > 0) {
+    nodes.forEach(newNode => {
+      const oldNode = currentNodes.find(n => n.id === newNode.id);
+      if (oldNode && oldNode.online !== newNode.online) {
+        // 节点状态发生变化
+        playNodeStatusSound(newNode.online);
+      }
+    });
   }
   
   // 缓存当前节点数据
@@ -597,6 +716,22 @@ function bindEvents() {
   
   // 主题切换按钮
   themeToggle.addEventListener('click', toggleTheme);
+  
+  // 音效开关
+  if (soundToggle) {
+    soundEnabled = soundToggle.checked;
+    soundToggle.addEventListener('change', () => {
+      soundEnabled = soundToggle.checked;
+      if (soundEnabled) {
+        showNotification('SOUND EFFECTS ENABLED 🔊');
+        playSound('success'); // 播放成功音效确认
+      } else {
+        showNotification('SOUND EFFECTS DISABLED 🔇');
+      }
+      // 保存到 localStorage
+      localStorage.setItem('soundEnabled', soundEnabled);
+    });
+  }
   
   // 搜索输入框
   if (searchInput) {
