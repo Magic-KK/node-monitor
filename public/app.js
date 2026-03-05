@@ -603,6 +603,7 @@ async function loadConfig() {
   } catch (err) {
     console.error('⚠️ CONFIG LOAD FAILED:', err);
     showError('SYSTEM ERROR: UNABLE TO LOAD CONFIGURATION');
+    showErrorParticles(window.innerWidth / 2, 100, 40);
   }
 }
 
@@ -632,11 +633,14 @@ async function fetchStatus() {
       playSound('refresh');
     } else {
       showError('SYSTEM ERROR: ' + result.error);
+      showErrorParticles(window.innerWidth / 2, 150, 30);
       playSound('error');
     }
   } catch (err) {
     console.error('⚠️ STATUS FETCH FAILED:', err);
     showError('CONNECTION ERROR: CHECK NETWORK');
+    showErrorParticles(window.innerWidth / 2, 150, 30);
+    triggerErrorShake(document.querySelector('.refresh-btn'));
   } finally {
     isRefreshing = false;
     updateButtonState(false);
@@ -669,11 +673,15 @@ async function runHealthCheck() {
       playSound('success');
     } else {
       showError('SCAN FAILED: ' + result.error);
+      showErrorParticles(window.innerWidth / 2, 200, 35);
+      triggerErrorShake(healthCheckBtn);
       playSound('error');
     }
   } catch (err) {
     console.error('⚠️ HEALTH CHECK FAILED:', err);
     showError('UNABLE TO EXECUTE SCAN');
+    showErrorParticles(window.innerWidth / 2, 200, 35);
+    triggerErrorShake(healthCheckBtn);
   } finally {
     updateButtonState(false);
     healthCheckBtn.disabled = false;
@@ -1435,7 +1443,7 @@ function bindEvents() {
  */
 function showError(message) {
   const errorEl = document.createElement('div');
-  errorEl.className = 'error-message';
+  errorEl.className = 'error-message error-ripple';
   errorEl.textContent = '⚠️ ' + message;
   
   // 插入到顶部
@@ -1443,6 +1451,151 @@ function showError(message) {
   
   // 3 秒后移除
   setTimeout(() => errorEl.remove(), 3000);
+  
+  // 播放错误音效
+  playSound('error');
+}
+
+/**
+ * 触发元素震动动画
+ * @param {HTMLElement} element - 目标元素
+ */
+function triggerErrorShake(element) {
+  if (!element) return;
+  
+  element.classList.add('error-shake');
+  
+  // 动画结束后移除 class
+  setTimeout(() => {
+    element.classList.remove('error-shake');
+  }, 600);
+}
+
+/**
+ * 触发元素边框闪烁动画
+ * @param {HTMLElement} element - 目标元素
+ */
+function triggerErrorBorderFlash(element) {
+  if (!element) return;
+  
+  element.classList.add('error-border-flash');
+  
+  // 动画结束后移除 class
+  setTimeout(() => {
+    element.classList.remove('error-border-flash');
+  }, 400);
+}
+
+/**
+ * 显示错误粒子爆炸效果
+ * @param {number} x - X 坐标
+ * @param {number} y - Y 坐标
+ * @param {number} count - 粒子数量
+ */
+function showErrorParticles(x = window.innerWidth / 2, y = window.innerHeight / 2, count = 30) {
+  // 创建粒子容器
+  let container = document.querySelector('.error-particle-container');
+  
+  if (!container) {
+    container = document.createElement('div');
+    container.className = 'error-particle-container';
+    document.body.appendChild(container);
+  }
+  
+  // 激活容器
+  container.classList.add('active');
+  
+  // 创建粒子
+  for (let i = 0; i < count; i++) {
+    const particle = document.createElement('div');
+    particle.className = 'error-particle';
+    
+    // 随机方向
+    const angle = (Math.PI * 2 * i) / count;
+    const distance = 100 + Math.random() * 150;
+    const tx = Math.cos(angle) * distance;
+    const ty = Math.sin(angle) * distance;
+    
+    // 设置粒子样式
+    particle.style.left = x + 'px';
+    particle.style.top = y + 'px';
+    particle.style.setProperty('--tx', tx + 'px');
+    particle.style.setProperty('--ty', ty + 'px');
+    particle.style.animation = `errorParticleExplode ${0.5 + Math.random() * 0.3}s ease-out forwards`;
+    
+    container.appendChild(particle);
+    
+    // 粒子动画结束后移除
+    setTimeout(() => {
+      particle.remove();
+      if (container.children.length === 0) {
+        container.classList.remove('active');
+      }
+    }, 800);
+  }
+  
+  // 播放错误音效
+  playSound('error');
+}
+
+/**
+ * 显示严重错误覆盖层
+ * @param {string} title - 错误标题
+ * @param {string} message - 错误详情
+ * @param {Function} onRetry - 重试回调
+ */
+function showCriticalError(title, message, onRetry) {
+  // 创建覆盖层
+  let overlay = document.querySelector('.critical-error-overlay');
+  
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.className = 'critical-error-overlay';
+    overlay.innerHTML = `
+      <div class="critical-error-content">
+        <div class="critical-error-icon">⚠️</div>
+        <h2 class="critical-error-title"></h2>
+        <p class="critical-error-message"></p>
+        <button class="critical-error-retry-btn">重试</button>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    
+    // 绑定重试按钮事件
+    const retryBtn = overlay.querySelector('.critical-error-retry-btn');
+    retryBtn.addEventListener('click', () => {
+      overlay.classList.remove('active');
+      setTimeout(() => overlay.remove(), 300);
+      if (onRetry) onRetry();
+    });
+  }
+  
+  // 设置内容
+  overlay.querySelector('.critical-error-title').textContent = title;
+  overlay.querySelector('.critical-error-message').textContent = message;
+  
+  // 显示覆盖层
+  overlay.classList.add('active');
+  
+  // 播放错误音效
+  playSound('error');
+}
+
+/**
+ * 显示节点卡片错误状态
+ * @param {string} nodeId - 节点 ID
+ * @param {boolean} isError - 是否为错误状态
+ */
+function setNodeErrorState(nodeId, isError) {
+  const card = document.querySelector(`.node-card[data-node-id="${nodeId}"]`);
+  if (!card) return;
+  
+  if (isError) {
+    card.classList.add('error-state');
+    triggerErrorShake(card);
+  } else {
+    card.classList.remove('error-state');
+  }
 }
 
 /**
@@ -1881,6 +2034,7 @@ ${selectedNode.description ? 'DESCRIPTION: ' + selectedNode.description : ''}
   } catch (err) {
     console.error('⚠️ COPY FAILED:', err);
     showError('FAILED TO COPY TO CLIPBOARD');
+    triggerErrorBorderFlash(document.querySelector('.copy-info-btn'));
   }
 }
 
@@ -2509,10 +2663,13 @@ async function saveSettings() {
       }, 1500);
     } else {
       showSettingsMessage('保存失败：' + result.error, 'error');
+      triggerErrorBorderFlash(document.querySelector('.save-settings-btn'));
     }
   } catch (err) {
     console.error('⚠️ SETTINGS SAVE FAILED:', err);
     showSettingsMessage('保存配置失败：' + err.message, 'error');
+    triggerErrorBorderFlash(document.querySelector('.save-settings-btn'));
+    showErrorParticles(window.innerWidth / 2, window.innerHeight / 2, 25);
   }
 }
 
