@@ -2,6 +2,7 @@
 
 > 实时监控团队节点状态，可视化展示运行情况
 
+![Version](https://img.shields.io/badge/version-v1.4.0-6C63FF.svg?style=flat-square)
 [![GitHub stars](https://img.shields.io/github/stars/Magic-KK/node-monitor?style=flat-square)](https://github.com/Magic-KK/node-monitor/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/Magic-KK/node-monitor?style=flat-square)](https://github.com/Magic-KK/node-monitor/network)
 [![GitHub issues](https://img.shields.io/github/issues/Magic-KK/node-monitor?style=flat-square)](https://github.com/Magic-KK/node-monitor/issues)
@@ -346,6 +347,25 @@ curl -X POST http://localhost:3000/api/health-check
 - ✨ **新增**：agent 目录存在性检测
 - ✨ **新增**：配置重载 API (`/api/reload-config`)
 - 📝 **文档**：更新配置说明和 API 文档
+
+### v1.4.0 (2026-03-05)
+- 🕸️ **节点连接线路图** - 可视化展示主脑与专才的连接关系
+- 📊 **CPU/内存监控** - 实时显示系统资源使用情况
+- 📈 **响应时间图表** - 历史性能趋势可视化
+
+### v1.3.0 (2026-03-05)
+- 🌓 **主题切换** - 支持暗色/亮色模式，localStorage 持久化
+- 🔍 **搜索过滤** - 快速查找节点，支持 ESC 快捷键
+
+### v1.2.0 (2026-03-05)
+- 🎨 **赛博朋克界面** - 霓虹配色 + 深色主题 + 辉光动画
+- 🌐 **动态背景** - 网格动画 + 扫描线效果
+- ✨ **炫酷特效** - 悬浮/脉冲/流光/全息卡片
+
+### v1.1.0 (2026-03-05)
+- ✅ **真实状态检测** - 从 openclaw.json 读取真实配置
+- 📋 **配置识别** - 自动识别已配置/未配置节点
+- 🚨 **健康检查** - 手动/自动检测节点可用性
 
 ### v1.0.0 (2026-03-05)
 - ✨ 初始版本发布
