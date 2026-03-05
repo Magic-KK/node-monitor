@@ -68,6 +68,10 @@ const closeModal = document.getElementById('closeModal');
 const pingNodeBtn = document.getElementById('pingNodeBtn');
 const copyInfoBtn = document.getElementById('copyInfoBtn');
 
+// 连线图层
+const connectionCanvas = document.getElementById('connectionCanvas');
+let connectionCtx = null;
+
 // 当前选中的节点
 let selectedNode = null;
 
@@ -80,6 +84,9 @@ async function init() {
   
   // 初始化粒子背景
   initParticles();
+  
+  // 初始化连线图层
+  initConnections();
   
   // 初始化响应时间图表
   initResponseTimeChart();
