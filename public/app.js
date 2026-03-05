@@ -151,6 +151,11 @@ function toggleTheme() {
   // 更新图表
   updateResponseTimeChart();
   
+  // 重绘连线
+  if (currentNodes && currentNodes.length > 0) {
+    drawConnections(filterNodes(currentNodes, searchQuery));
+  }
+  
   showNotification(`THEME SWITCHED TO ${newTheme.toUpperCase()} MODE`);
   console.log('🎨 THEME TOGGLED:', newTheme);
 }
@@ -272,6 +277,11 @@ function renderNodes(nodes) {
   
   // 更新搜索按钮状态
   updateClearSearchButton();
+  
+  // 绘制节点连线（延迟等待 DOM 渲染完成）
+  setTimeout(() => {
+    drawConnections(filteredNodes);
+  }, 100);
 }
 
 /**
@@ -1333,6 +1343,165 @@ function updateResponseTimeHistory(nodes) {
   });
   
   updateResponseTimeChart();
+}
+
+// ===== 节点连线系统 =====
+
+/**
+ * 初始化连线画布
+ */
+function initConnections() {
+  if (!connectionCanvas) return;
+  
+  connectionCtx = connectionCanvas.getContext('2d');
+  
+  // 设置画布尺寸
+  resizeConnectionCanvas();
+  
+  // 监听窗口大小变化
+  window.addEventListener('resize', () => {
+    resizeConnectionCanvas();
+    // 重绘连线
+    if (currentNodes && currentNodes.length > 0) {
+      drawConnections(currentNodes);
+    }
+  });
+  
+  console.log('🔗 CONNECTION LAYER INITIALIZED');
+}
+
+/**
+ * 调整连线画布尺寸
+ */
+function resizeConnectionCanvas() {
+  if (!connectionCanvas) return;
+  
+  connectionCanvas.width = window.innerWidth;
+  connectionCanvas.height = window.innerHeight;
+}
+
+/**
+ * 绘制节点连线
+ * @param {Array} nodes - 节点数组
+ */
+function drawConnections(nodes) {
+  if (!connectionCtx || !connectionCanvas) return;
+  
+  // 清空画布
+  connectionCtx.clearRect(0, 0, connectionCanvas.width, connectionCanvas.height);
+  
+  // 获取主题
+  const isLightTheme = document.documentElement.getAttribute('data-theme') === 'light';
+  
+  // 连线颜色配置
+  const lineColors = {
+    dark: 'rgba(0, 245, 255, 0.3)',
+    light: 'rgba(0, 139, 163, 0.2)'
+  };
+  
+  const glowColors = {
+    dark: 'rgba(0, 245, 255, 0.5)',
+    light: 'rgba(0, 139, 163, 0.3)'
+  };
+  
+  const lineColor = isLightTheme ? lineColors.light : lineColors.dark;
+  const glowColor = isLightTheme ? glowColors.light : glowColors.dark;
+  
+  // 获取所有节点卡片元素
+  const nodeCards = document.querySelectorAll('.node-card');
+  if (nodeCards.length < 2) return;
+  
+  // 找到主脑节点（作为中心节点）
+  let mainNodeIndex = -1;
+  nodes.forEach((node, index) => {
+    if (node.id === 'main-bot' || node.role === '主脑') {
+      mainNodeIndex = index;
+    }
+  });
+  
+  // 获取节点卡片中心点坐标
+  const nodeCenters = [];
+  nodeCards.forEach((card, index) => {
+    const rect = card.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    nodeCenters.push({ x: centerX, y: centerY, index });
+  });
+  
+  // 绘制连线：主脑连接到所有其他节点
+  if (mainNodeIndex >= 0 && nodeCenters[mainNodeIndex]) {
+    const mainNode = nodeCenters[mainNodeIndex];
+    
+    nodeCenters.forEach((target, index) => {
+      if (index !== mainNodeIndex) {
+        drawConnectionLine(
+          connectionCtx,
+          mainNode.x,
+          mainNode.y,
+          target.x,
+          target.y,
+          lineColor,
+          glowColor,
+          nodes[index]?.status === 'online'
+        );
+      }
+    });
+  }
+  
+  // 如果没有明确的主脑节点，则绘制网状连接（相邻节点连接）
+  if (mainNodeIndex < 0 && nodeCenters.length > 1) {
+    for (let i = 0; i < nodeCenters.length - 1; i++) {
+      drawConnectionLine(
+        connectionCtx,
+        nodeCenters[i].x,
+        nodeCenters[i].y,
+        nodeCenters[i + 1].x,
+        nodeCenters[i + 1].y,
+        lineColor,
+        glowColor,
+        nodes[i]?.status === 'online'
+      );
+    }
+  }
+}
+
+/**
+ * 绘制单条连线
+ */
+function drawConnectionLine(ctx, x1, y1, x2, y2, lineColor, glowColor, isActive) {
+  // 绘制光晕效果
+  if (isActive) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.strokeStyle = glowColor;
+    ctx.lineWidth = 4;
+    ctx.shadowColor = glowColor;
+    ctx.shadowBlur = 15;
+    ctx.stroke();
+    ctx.restore();
+  }
+  
+  // 绘制主连线
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.strokeStyle = lineColor;
+  ctx.lineWidth = 2;
+  ctx.setLineDash([5, 5]); // 虚线效果
+  ctx.stroke();
+  ctx.restore();
+  
+  // 绘制端点圆圈
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(x1, y1, 4, 0, Math.PI * 2);
+  ctx.arc(x2, y2, 4, 0, Math.PI * 2);
+  ctx.fillStyle = isActive ? glowColor : lineColor;
+  ctx.fill();
+  ctx.restore();
 }
 
 // 页面加载完成后初始化
