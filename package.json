@@ -1,11 +1,13 @@
 {
   "name": "node-monitor",
-  "version": "1.27.0",
-  "description": "J.A.R.V.I.S. 团队节点状态监控服务 - 性能优化增强版",
+  "version": "1.28.0",
+  "description": "J.A.R.V.I.S. 团队节点状态监控服务 - HTTPS 安全增强版",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "start:https": "HTTPS_ENABLED=true node server.js",
     "dev": "node --watch server.js",
+    "generate-certs": "bash scripts/generate-ssl-certs.sh",
     "docker:build": "docker build -t node-monitor:latest .",
     "docker:run": "docker run -d -p 3000:3000 --name node-monitor node-monitor:latest",
     "docker:stop": "docker stop node-monitor && docker rm node-monitor",

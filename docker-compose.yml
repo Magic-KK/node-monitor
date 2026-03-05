@@ -9,6 +9,7 @@ services:
     restart: unless-stopped
     ports:
       - "3000:3000"
+      - "3443:3443"
     volumes:
       # 持久化配置数据
       - ./config:/app/config
@@ -23,6 +24,12 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
+      - HTTPS_PORT=3443
+      # 启用 HTTPS（取消注释以启用）
+      # - HTTPS_ENABLED=true
+      # SSL 证书路径（容器内）
+      # - SSL_CERT_PATH=/app/config/ssl/server.crt
+      # - SSL_KEY_PATH=/app/config/ssl/server.key
       # 可选：配置飞书 webhook
       # - FEISHU_WEBHOOK=https://open.feishu.cn/open-apis/bot/v2/hook/xxx
     networks:

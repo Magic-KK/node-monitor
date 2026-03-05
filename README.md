@@ -2,7 +2,7 @@
 
 > 实时监控团队节点状态，可视化展示运行情况
 
-![Version](https://img.shields.io/badge/version-v1.25.0-6C63FF.svg?style=flat-square)
+![Version](https://img.shields.io/badge/version-v1.28.0-6C63FF.svg?style=flat-square)
 [![GitHub stars](https://img.shields.io/github/stars/Magic-KK/node-monitor?style=flat-square)](https://github.com/Magic-KK/node-monitor/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/Magic-KK/node-monitor?style=flat-square)](https://github.com/Magic-KK/node-monitor/network)
 [![GitHub issues](https://img.shields.io/github/issues/Magic-KK/node-monitor?style=flat-square)](https://github.com/Magic-KK/node-monitor/issues)
@@ -135,8 +135,77 @@ Docker 部署会自动挂载以下目录，确保数据持久化：
 | 变量名 | 说明 | 默认值 |
 |--------|------|--------|
 | `NODE_ENV` | 运行环境 | `production` |
-| `PORT` | 服务端口 | `3000` |
+| `PORT` | HTTP 服务端口 | `3000` |
+| `HTTPS_PORT` | HTTPS 服务端口 | `3443` |
+| `HTTPS_ENABLED` | 是否启用 HTTPS | `false` |
+| `SSL_CERT_PATH` | SSL 证书路径 | `./config/ssl/server.crt` |
+| `SSL_KEY_PATH` | SSL 私钥路径 | `./config/ssl/server.key` |
 | `FEISHU_WEBHOOK` | 飞书 webhook 地址 | 无 |
+
+---
+
+## 🔒 HTTPS 安全连接
+
+### 启用 HTTPS（本地开发）
+
+Node Monitor 支持 HTTPS 安全连接，保护数据传输安全。
+
+#### 步骤 1：生成 SSL 证书
+
+```bash
+# 生成自签名证书（开发环境）
+npm run generate-certs
+```
+
+证书将保存在 `config/ssl/` 目录：
+- `server.crt` - SSL 证书
+- `server.key` - 私钥
+
+> ⚠️ **注意**：自签名证书在浏览器中会显示安全警告，点击"继续访问"即可。生产环境请使用正式 SSL 证书。
+
+#### 步骤 2：启动 HTTPS 服务
+
+```bash
+# 方式 1：使用 npm 脚本
+npm start:https
+
+# 方式 2：设置环境变量
+HTTPS_ENABLED=true npm start
+```
+
+#### 步骤 3：访问 HTTPS 服务
+
+- **主界面**: https://localhost:3443
+- **API**: https://localhost:3443/api/status
+- **WebSocket**: wss://localhost:3443/ws
+
+### Docker 启用 HTTPS
+
+编辑 `docker-compose.yml`，取消注释以下环境变量：
+
+```yaml
+environment:
+  - HTTPS_ENABLED=true
+  - HTTPS_PORT=3443
+  - SSL_CERT_PATH=/app/config/ssl/server.crt
+  - SSL_KEY_PATH=/app/config/ssl/server.key
+```
+
+然后重启服务：
+
+```bash
+docker-compose up -d
+```
+
+### 生产环境 HTTPS 配置
+
+生产环境建议使用正式的 SSL 证书（如 Let's Encrypt）：
+
+```bash
+# 使用 Let's Encrypt 证书（示例）
+cp /etc/letsencrypt/live/yourdomain.com/fullchain.pem ./config/ssl/server.crt
+cp /etc/letsencrypt/live/yourdomain.com/privkey.pem ./config/ssl/server.key
+```
 
 ---
 

@@ -6,17 +6,73 @@
  * - 提供团队节点状态 API
  * - 健康检查服务（真实检测，非模拟）
  * - 静态文件服务（前端页面）
+ * - 🔒 HTTPS 安全连接支持
  * 
  * @author 牛开发 🐮💻
- * @version 1.26.0 - 性能优化版本
+ * @version 1.28.0 - HTTPS 安全增强版
  */
 
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const http = require('http');
+const https = require('https');
 const os = require('os');
 const WebSocket = require('ws');
+
+// ===== HTTPS 配置 =====
+
+/**
+ * HTTPS 配置选项
+ * 可通过环境变量或配置文件启用
+ */
+const HTTPS_CONFIG = {
+  enabled: process.env.HTTPS_ENABLED === 'true' || process.env.HTTPS_ENABLED === '1',
+  port: parseInt(process.env.HTTPS_PORT) || 3443,
+  certPath: process.env.SSL_CERT_PATH || './config/ssl/server.crt',
+  keyPath: process.env.SSL_KEY_PATH || './config/ssl/server.key'
+};
+
+/**
+ * 加载 SSL 证书
+ * @returns {Object|null} SSL 证书选项或 null（如果未启用或加载失败）
+ */
+function loadSSLCerts() {
+  if (!HTTPS_CONFIG.enabled) {
+    return null;
+  }
+  
+  try {
+    const certPath = path.resolve(__dirname, HTTPS_CONFIG.certPath);
+    const keyPath = path.resolve(__dirname, HTTPS_CONFIG.keyPath);
+    
+    // 检查证书文件是否存在
+    if (!fs.existsSync(certPath)) {
+      console.warn('⚠️  SSL 证书文件不存在：' + certPath);
+      console.warn('   请运行：npm run generate-certs');
+      return null;
+    }
+    
+    if (!fs.existsSync(keyPath)) {
+      console.warn('⚠️  SSL 私钥文件不存在：' + keyPath);
+      console.warn('   请运行：npm run generate-certs');
+      return null;
+    }
+    
+    // 读取证书和私钥
+    const cert = fs.readFileSync(certPath);
+    const key = fs.readFileSync(keyPath);
+    
+    console.log('✅ SSL 证书加载成功');
+    console.log('   证书：' + certPath);
+    console.log('   私钥：' + keyPath);
+    
+    return { cert, key };
+  } catch (err) {
+    console.error('❌ SSL 证书加载失败：' + err.message);
+    return null;
+  }
+}
 
 // ===== 性能优化模块 =====
 
@@ -166,11 +222,129 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ===== WebSocket 实时推送系统 =====
-// 创建 HTTP 服务器
+// 创建 HTTP 服务器（主服务器）
 const server = http.createServer(app);
 
-// 创建 WebSocket 服务器
+// 创建 WebSocket 服务器（绑定到 HTTP 服务器）
 const wss = new WebSocket.Server({ server, path: '/ws' });
+
+// ===== HTTPS 服务器（可选） =====
+let httpsServer = null;
+let httpsWss = null;
+
+/**
+ * 初始化 HTTPS 服务器
+ */
+function initHttpsServer() {
+  const sslOptions = loadSSLCerts();
+  
+  if (!sslOptions) {
+    console.log('🔓 HTTPS 未启用（证书未配置）');
+    console.log('   启用方法：');
+    console.log('   1. 生成证书：npm run generate-certs');
+    console.log('   2. 设置环境变量：HTTPS_ENABLED=true');
+    console.log('   3. 或直接启动：npm start:https');
+    return false;
+  }
+  
+  try {
+    // 创建 HTTPS 服务器
+    httpsServer = https.createServer(sslOptions, app);
+    
+    // 为 HTTPS 创建独立的 WebSocket 服务器
+    httpsWss = new WebSocket.Server({ server: httpsServer, path: '/ws' });
+    
+    // 复用 HTTP 的 WebSocket 连接处理逻辑
+    setupWebSocket(httpsWss);
+    
+    console.log('✅ HTTPS 服务器初始化成功');
+    return true;
+  } catch (err) {
+    console.error('❌ HTTPS 服务器初始化失败：' + err.message);
+    return false;
+  }
+}
+
+/**
+ * 设置 WebSocket 连接处理
+ * @param {WebSocket.Server} wsServer - WebSocket 服务器实例
+ */
+function setupWebSocket(wsServer) {
+  wsServer.on('connection', (ws) => {
+    clients.add(ws);
+    console.log('🔌 WebSocket 客户端已连接（当前在线：' + clients.size + '）');
+    
+    // 发送欢迎消息
+    sendToClient(ws, {
+      type: 'connected',
+      message: '欢迎连接到 J.A.R.V.I.S. 节点监控系统',
+      timestamp: new Date().toISOString()
+    });
+    
+    // 发送初始状态
+    const currentStatuses = nodeStatuses.map(node => ({
+      ...node,
+      lastCheck: node.lastCheck || new Date().toISOString()
+    }));
+    
+    sendToClient(ws, {
+      type: 'initial_state',
+      nodes: currentStatuses,
+      summary: getNodeSummary(currentStatuses),
+      timestamp: new Date().toISOString()
+    });
+    
+    // 处理客户端消息
+    ws.on('message', (message) => {
+      try {
+        const data = JSON.parse(message);
+        
+        switch (data.type) {
+          case 'ping':
+            sendToClient(ws, { type: 'pong', timestamp: new Date().toISOString() });
+            break;
+            
+          case 'request_state':
+            sendToClient(ws, {
+              type: 'state_update',
+              nodes: nodeStatuses,
+              summary: getNodeSummary(nodeStatuses),
+              timestamp: new Date().toISOString()
+            });
+            break;
+            
+          case 'request_metrics':
+            sendToClient(ws, {
+              type: 'metrics_update',
+              metrics: getSystemMetrics(),
+              timestamp: new Date().toISOString()
+            });
+            break;
+            
+          default:
+            console.log('📨 未知消息类型：' + data.type);
+        }
+      } catch (err) {
+        console.error('❌ 解析 WebSocket 消息失败：' + err.message);
+      }
+    });
+    
+    // 处理断开连接
+    ws.on('close', () => {
+      clients.delete(ws);
+      console.log('🔌 WebSocket 客户端已断开（当前在线：' + clients.size + '）');
+    });
+    
+    // 处理错误
+    ws.on('error', (err) => {
+      console.error('❌ WebSocket 错误：' + err.message);
+      clients.delete(ws);
+    });
+  });
+}
+
+// 初始化 WebSocket（HTTP）
+setupWebSocket(wss);
 
 // 客户端连接集合
 const clients = new Set();
@@ -3248,10 +3422,26 @@ server.listen(PORT, () => {
   console.log('║     🚀 Node Monitor Server 已启动                      ║');
   console.log('║     J.A.R.V.I.S. 团队节点状态监控                       ║');
   console.log('╠════════════════════════════════════════════════════════╣');
-  console.log(`║     🌐 本地访问：http://localhost:${PORT}                ║`);
+  console.log(`║     🌐 HTTP 访问：http://localhost:${PORT}               ║`);
   console.log(`║     📡 API: http://localhost:${PORT}/api/status         ║`);
   console.log(`║     🔌 WebSocket: ws://localhost:${PORT}/ws             ║`);
   console.log(`║     📋 配置源：openclaw.json                            ║`);
+  
+  // 启动 HTTPS 服务器（如果启用）
+  const httpsEnabled = initHttpsServer();
+  
+  if (httpsEnabled) {
+    httpsServer.listen(HTTPS_CONFIG.port, () => {
+      console.log(`║     🔒 HTTPS 访问：https://localhost:${HTTPS_CONFIG.port}   ║`);
+      console.log(`║     🔒 WSS: wss://localhost:${HTTPS_CONFIG.port}/ws         ║`);
+    });
+    console.log('╠════════════════════════════════════════════════════════╣');
+    console.log('║     🔒 HTTPS 已启用 - 安全连接保护                      ║');
+  } else {
+    console.log('╠════════════════════════════════════════════════════════╣');
+    console.log('║     ⚠️  HTTPS 未启用 - 建议使用 HTTPS 保护数据传输      ║');
+  }
+  
   console.log('╚════════════════════════════════════════════════════════╝');
   console.log('');
   
