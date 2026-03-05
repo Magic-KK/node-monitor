@@ -71,6 +71,9 @@ async function init() {
   // 初始化粒子背景
   initParticles();
   
+  // 初始化响应时间图表
+  initResponseTimeChart();
+  
   // 初始化主题
   initTheme();
   
@@ -125,6 +128,9 @@ function toggleTheme() {
   // 更新粒子颜色
   updateParticleColors();
   
+  // 更新图表
+  updateResponseTimeChart();
+  
   showNotification(`THEME SWITCHED TO ${newTheme.toUpperCase()} MODE`);
   console.log('🎨 THEME TOGGLED:', newTheme);
 }
@@ -165,6 +171,8 @@ async function fetchStatus() {
       renderNodes(result.data.nodes);
       updateStats(result.data);
       updateLastUpdateTime(result.data.lastUpdate);
+      // 更新响应时间历史
+      updateResponseTimeHistory(result.data.nodes);
     } else {
       showError('SYSTEM ERROR: ' + result.error);
     }
@@ -557,6 +565,15 @@ function bindEvents() {
     } else {
       startAutoRefresh();
     }
+  });
+  
+  // 窗口大小改变时更新图表
+  window.addEventListener('resize', () => {
+    // 延迟一点执行，避免频繁触发
+    setTimeout(() => {
+      initResponseTimeChart();
+      updateResponseTimeChart();
+    }, 100);
   });
 }
 
@@ -984,6 +1001,247 @@ ${selectedNode.description ? 'DESCRIPTION: ' + selectedNode.description : ''}
     console.error('⚠️ COPY FAILED:', err);
     showError('FAILED TO COPY TO CLIPBOARD');
   }
+}
+
+// ===== 响应时间图表功能 =====
+
+// 响应时间历史数据（最多保存 10 次记录）
+const responseTimeHistory = {
+  maxRecords: 10,
+  data: {} // { nodeId: [{ time, responseTime }, ...] }
+};
+
+// 图表配置
+const CHART_CONFIG = {
+  colors: {
+    dark: {
+      grid: 'rgba(0, 245, 255, 0.1)',
+      text: 'rgba(255, 255, 255, 0.6)',
+      default: '#00f5ff'
+    },
+    light: {
+      grid: 'rgba(0, 139, 163, 0.15)',
+      text: 'rgba(26, 26, 46, 0.6)',
+      default: '#008ba3'
+    }
+  },
+  nodeColors: {} // 为每个节点分配颜色
+};
+
+// 节点颜色池
+const NODE_COLOR_POOL = [
+  '#00f5ff', '#b926ff', '#0066ff', '#ff006e', '#00ff88',
+  '#fcee0a', '#ff6b35', '#00d9ff', '#ff00ff', '#00ff00'
+];
+
+/**
+ * 初始化响应时间图表
+ */
+function initResponseTimeChart() {
+  const canvas = document.getElementById('responseTimeChart');
+  if (!canvas) return;
+  
+  const ctx = canvas.getContext('2d');
+  
+  // 设置画布尺寸（高分辨率）
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
+  
+  // 存储 canvas 上下文供后续使用
+  responseTimeChart.ctx = ctx;
+  responseTimeChart.width = rect.width;
+  responseTimeChart.height = rect.height;
+  
+  console.log('📈 RESPONSE TIME CHART INITIALIZED');
+}
+
+// 图表对象
+const responseTimeChart = {
+  ctx: null,
+  width: 0,
+  height: 0
+};
+
+/**
+ * 添加响应时间记录
+ * @param {string} nodeId - 节点 ID
+ * @param {number} responseTime - 响应时间 (ms)
+ */
+function addResponseTimeRecord(nodeId, responseTime) {
+  if (!responseTimeHistory.data[nodeId]) {
+    responseTimeHistory.data[nodeId] = [];
+    // 为节点分配颜色
+    const colorIndex = Object.keys(responseTimeHistory.data).length % NODE_COLOR_POOL.length;
+    CHART_CONFIG.nodeColors[nodeId] = NODE_COLOR_POOL[colorIndex];
+  }
+  
+  const records = responseTimeHistory.data[nodeId];
+  records.push({
+    time: new Date(),
+    responseTime: responseTime
+  });
+  
+  // 保持最大记录数
+  if (records.length > responseTimeHistory.maxRecords) {
+    records.shift();
+  }
+}
+
+/**
+ * 更新响应时间图表
+ */
+function updateResponseTimeChart() {
+  const canvas = document.getElementById('responseTimeChart');
+  if (!canvas || !responseTimeChart.ctx) return;
+  
+  const ctx = responseTimeChart.ctx;
+  const width = responseTimeChart.width;
+  const height = responseTimeChart.height;
+  const isLightTheme = document.documentElement.getAttribute('data-theme') === 'light';
+  const config = isLightTheme ? CHART_CONFIG.colors.light : CHART_CONFIG.colors.dark;
+  
+  // 清空画布
+  ctx.clearRect(0, 0, width, height);
+  
+  const nodeIds = Object.keys(responseTimeHistory.data);
+  if (nodeIds.length === 0) {
+    // 绘制空状态提示
+    ctx.fillStyle = config.text;
+    ctx.font = '14px "Segoe UI", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('NO DATA AVAILABLE', width / 2, height / 2);
+    return;
+  }
+  
+  // 计算最大响应时间（用于 Y 轴缩放）
+  let maxResponseTime = 100;
+  nodeIds.forEach(nodeId => {
+    responseTimeHistory.data[nodeId].forEach(record => {
+      if (record.responseTime > maxResponseTime) {
+        maxResponseTime = record.responseTime;
+      }
+    });
+  });
+  maxResponseTime = Math.ceil(maxResponseTime / 100) * 100; // 向上取整到 100 的倍数
+  
+  // 绘制网格
+  const gridLines = 5;
+  ctx.strokeStyle = config.grid;
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= gridLines; i++) {
+    const y = (height - 40) * (i / gridLines) + 20;
+    ctx.beginPath();
+    ctx.moveTo(50, y);
+    ctx.lineTo(width - 20, y);
+    ctx.stroke();
+    
+    // Y 轴标签
+    ctx.fillStyle = config.text;
+    ctx.font = '11px "Segoe UI", sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(`${maxResponseTime - (maxResponseTime / gridLines) * i}ms`, 45, y + 4);
+  }
+  
+  // 绘制每个节点的折线
+  const padding = { left: 50, right: 20, top: 20, bottom: 40 };
+  const chartWidth = width - padding.left - padding.right;
+  const chartHeight = height - padding.top - padding.bottom;
+  
+  nodeIds.forEach((nodeId, nodeIndex) => {
+    const records = responseTimeHistory.data[nodeId];
+    if (records.length < 2) return;
+    
+    const color = CHART_CONFIG.nodeColors[nodeId] || config.default;
+    
+    // 绘制折线
+    ctx.beginPath();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    
+    records.forEach((record, index) => {
+      const x = padding.left + (chartWidth / (responseTimeHistory.maxRecords - 1)) * index;
+      const y = padding.top + chartHeight - (record.responseTime / maxResponseTime) * chartHeight;
+      
+      if (index === 0) {
+        ctx.moveTo(x, y);
+      } else {
+        ctx.lineTo(x, y);
+      }
+    });
+    ctx.stroke();
+    
+    // 绘制数据点
+    records.forEach((record, index) => {
+      const x = padding.left + (chartWidth / (responseTimeHistory.maxRecords - 1)) * index;
+      const y = padding.top + chartHeight - (record.responseTime / maxResponseTime) * chartHeight;
+      
+      // 绘制点
+      ctx.beginPath();
+      ctx.fillStyle = color;
+      ctx.arc(x, y, 4, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // 绘制辉光
+      ctx.beginPath();
+      ctx.fillStyle = color + '40'; // 添加透明度
+      ctx.arc(x, y, 8, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  });
+  
+  // 更新图例
+  updateChartLegend();
+}
+
+/**
+ * 更新图表图例
+ */
+function updateChartLegend() {
+  const legendEl = document.getElementById('chartLegend');
+  if (!legendEl) return;
+  
+  const nodeIds = Object.keys(responseTimeHistory.data);
+  if (nodeIds.length === 0) {
+    legendEl.innerHTML = '<div class="legend-item">NO DATA</div>';
+    return;
+  }
+  
+  legendEl.innerHTML = nodeIds.map(nodeId => {
+    const color = CHART_CONFIG.nodeColors[nodeId] || CHART_CONFIG.colors.dark.default;
+    const records = responseTimeHistory.data[nodeId];
+    const latestTime = records[records.length - 1]?.time.toLocaleTimeString('en-US', { 
+      hour12: false,
+      hour: '2-digit', 
+      minute: '2-digit'
+    }) || '-';
+    const latestResponseTime = records[records.length - 1]?.responseTime || 0;
+    
+    return `
+      <div class="legend-item" data-node-id="${nodeId}">
+        <div class="legend-color" style="background: ${color}; color: ${color}"></div>
+        <span>${nodeId}: ${latestResponseTime}ms (${latestTime})</span>
+      </div>
+    `;
+  }).join('');
+}
+
+/**
+ * 从节点数据更新响应时间历史
+ * @param {Array} nodes - 节点数组
+ */
+function updateResponseTimeHistory(nodes) {
+  nodes.forEach(node => {
+    if (node.responseTime && node.configured) {
+      addResponseTimeRecord(node.id, node.responseTime);
+    }
+  });
+  
+  updateResponseTimeChart();
 }
 
 // 页面加载完成后初始化

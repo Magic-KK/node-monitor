@@ -135,6 +135,21 @@
       </div>
     </div>
 
+    <!-- 响应时间图表 -->
+    <div class="response-time-chart-container">
+      <div class="chart-header">
+        <span class="chart-icon">📈</span>
+        <span class="chart-title">RESPONSE TIME HISTORY</span>
+        <span class="chart-subtitle">Last 10 checks</span>
+      </div>
+      <div class="chart-wrapper">
+        <canvas id="responseTimeChart"></canvas>
+      </div>
+      <div class="chart-legend" id="chartLegend">
+        <!-- 图例动态生成 -->
+      </div>
+    </div>
+
     <!-- 页脚 -->
     <footer class="footer">
       <p>
@@ -143,7 +158,7 @@
         <a href="https://github.com/Magic-KK/node-monitor" target="_blank">GITHUB</a>
       </p>
       <p style="margin-top: 10px; font-size: 0.75rem; color: var(--text-muted);">
-        SYSTEM VERSION 1.2.0 // CYBERPUNK EDITION | PARTICLE BACKGROUND
+        SYSTEM VERSION 1.3.0 // RESPONSE TIME CHARTS
       </p>
     </footer>
   </div>
