@@ -303,6 +303,26 @@ let alertsConfig = {
 // 告警发送历史（用于冷却）
 const alertsHistory = [];
 
+// ===== 自动化日报/周报系统 =====
+// 报告存储目录
+const reportsDir = path.join(__dirname, 'data', 'reports');
+const dailyReportsPath = path.join(reportsDir, 'daily-reports.json');
+const weeklyReportsPath = path.join(reportsDir, 'weekly-reports.json');
+
+// 报告配置
+const reportsConfig = {
+  enabled: true,              // 是否启用自动报告
+  dailyTime: '23:59',         // 日报发送时间（每天）
+  weeklyDay: 0,               // 周报发送星期（0=周日，1=周一...）
+  weeklyTime: '23:59',        // 周报发送时间
+  sendViaFeishu: true,        // 是否通过飞书发送
+  feishuWebhook: null         // 飞书 webhook URL（从告警配置读取）
+};
+
+// 报告生成定时器
+let dailyReportTimer = null;
+let weeklyReportTimer = null;
+
 // ===== 实时日志系统 =====
 // 内存日志缓冲区（保留最近 200 条）
 const LOG_BUFFER_SIZE = 200;
@@ -473,6 +493,569 @@ function saveAlertsConfig() {
   } catch (err) {
     console.warn('⚠️ 保存告警配置失败:', err.message);
   }
+}
+
+// ===== 自动化日报/周报系统函数 =====
+
+/**
+ * 初始化报告系统
+ */
+function initReportsSystem() {
+  try {
+    // 创建报告目录
+    if (!fs.existsSync(reportsDir)) {
+      fs.mkdirSync(reportsDir, { recursive: true });
+      console.log('📁 创建报告数据目录:', reportsDir);
+    }
+    
+    // 初始化日报文件
+    if (!fs.existsSync(dailyReportsPath)) {
+      const initialData = {
+        version: '1.0',
+        createdAt: new Date().toISOString(),
+        reports: []
+      };
+      fs.writeFileSync(dailyReportsPath, JSON.stringify(initialData, null, 2));
+      console.log('📄 初始化日报文件');
+    }
+    
+    // 初始化周报文件
+    if (!fs.existsSync(weeklyReportsPath)) {
+      const initialData = {
+        version: '1.0',
+        createdAt: new Date().toISOString(),
+        reports: []
+      };
+      fs.writeFileSync(weeklyReportsPath, JSON.stringify(initialData, null, 2));
+      console.log('📄 初始化周报文件');
+    }
+    
+    // 从告警配置读取飞书 webhook
+    if (fs.existsSync(alertsConfigPath)) {
+      const config = JSON.parse(fs.readFileSync(alertsConfigPath, 'utf8'));
+      reportsConfig.feishuWebhook = config.feishuWebhook || null;
+    }
+    
+    // 启动报告调度器
+    scheduleReports();
+    
+    console.log('✅ 报告系统初始化完成');
+  } catch (err) {
+    console.warn('⚠️ 报告系统初始化失败:', err.message);
+  }
+}
+
+/**
+ * 生成日报
+ * @returns {Object} 日报数据
+ */
+function generateDailyReport() {
+  try {
+    const now = new Date();
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    yesterday.setHours(0, 0, 0, 0);
+    
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
+    
+    // 读取历史数据
+    if (!fs.existsSync(historyFilePath)) {
+      return null;
+    }
+    
+    const historyData = JSON.parse(fs.readFileSync(historyFilePath, 'utf8'));
+    const records = historyData.records || [];
+    
+    // 筛选昨天的记录
+    const yesterdayRecords = records.filter(r => {
+      const recordDate = new Date(r.timestamp);
+      return recordDate >= yesterday && recordDate < today;
+    });
+    
+    if (yesterdayRecords.length === 0) {
+      return null;
+    }
+    
+    // 统计节点数据
+    const nodeStats = {};
+    let totalChecks = 0;
+    let totalOnline = 0;
+    let totalResponseTime = 0;
+    let responseTimeCount = 0;
+    
+    yesterdayRecords.forEach(record => {
+      record.nodes.forEach(node => {
+        if (!nodeStats[node.id]) {
+          nodeStats[node.id] = {
+            id: node.id,
+            name: node.name,
+            role: node.role,
+            checks: 0,
+            online: 0,
+            offline: 0,
+            totalResponseTime: 0,
+            responseTimeCount: 0,
+            lastStatus: null,
+            statusChanges: 0
+          };
+        }
+        
+        const stats = nodeStats[node.id];
+        stats.checks++;
+        totalChecks++;
+        
+        if (node.online) {
+          stats.online++;
+          totalOnline++;
+          if (node.responseTime) {
+            stats.totalResponseTime += node.responseTime;
+            stats.responseTimeCount++;
+            totalResponseTime += node.responseTime;
+            responseTimeCount++;
+          }
+        } else {
+          stats.offline++;
+        }
+        
+        // 检测状态变化
+        if (stats.lastStatus !== null && stats.lastStatus !== node.online) {
+          stats.statusChanges++;
+        }
+        stats.lastStatus = node.online;
+      });
+    });
+    
+    // 计算汇总统计
+    const avgOnlineRate = totalChecks > 0 ? (totalOnline / totalChecks * 100).toFixed(2) : 0;
+    const avgResponseTime = responseTimeCount > 0 ? (totalResponseTime / responseTimeCount).toFixed(2) : 0;
+    
+    // 生成节点列表
+    const nodeList = Object.values(nodeStats).map(stats => ({
+      ...stats,
+      onlineRate: stats.checks > 0 ? (stats.online / stats.checks * 100).toFixed(2) : 0,
+      avgResponseTime: stats.responseTimeCount > 0 ? (stats.totalResponseTime / stats.responseTimeCount).toFixed(2) : 0
+    }));
+    
+    // 读取昨天的告警记录
+    let alertCount = 0;
+    if (fs.existsSync(alertsHistoryPath)) {
+      const alertData = JSON.parse(fs.readFileSync(alertsHistoryPath, 'utf8'));
+      const yesterdayAlerts = (alertData.alerts || []).filter(a => {
+        const alertDate = new Date(a.timestamp);
+        return alertDate >= yesterday && alertDate < today;
+      });
+      alertCount = yesterdayAlerts.length;
+    }
+    
+    const report = {
+      id: 'daily-' + yesterday.toISOString().split('T')[0],
+      type: 'daily',
+      date: yesterday.toISOString().split('T')[0],
+      generatedAt: now.toISOString(),
+      summary: {
+        totalNodes: Object.keys(nodeStats).length,
+        avgOnlineRate: parseFloat(avgOnlineRate),
+        avgResponseTime: parseFloat(avgResponseTime),
+        totalChecks: totalChecks,
+        totalOnline: totalOnline,
+        alertCount: alertCount
+      },
+      nodes: nodeList,
+      period: {
+        start: yesterday.toISOString(),
+        end: today.toISOString()
+      }
+    };
+    
+    // 保存报告
+    saveDailyReport(report);
+    
+    console.log(`📊 日报生成完成：${yesterday.toISOString().split('T')[0]}`);
+    
+    return report;
+  } catch (err) {
+    console.error('❌ 生成日报失败:', err.message);
+    return null;
+  }
+}
+
+/**
+ * 生成周报
+ * @returns {Object} 周报数据
+ */
+function generateWeeklyReport() {
+  try {
+    const now = new Date();
+    
+    // 计算上周的起始和结束时间
+    const dayOfWeek = now.getDay(); // 0=周日
+    const lastSunday = new Date(now);
+    lastSunday.setDate(now.getDate() - dayOfWeek - 7);
+    lastSunday.setHours(0, 0, 0, 0);
+    
+    const thisSunday = new Date(lastSunday);
+    thisSunday.setDate(lastSunday.getDate() + 7);
+    
+    // 读取历史数据
+    if (!fs.existsSync(historyFilePath)) {
+      return null;
+    }
+    
+    const historyData = JSON.parse(fs.readFileSync(historyFilePath, 'utf8'));
+    const records = historyData.records || [];
+    
+    // 筛选上周的记录
+    const weekRecords = records.filter(r => {
+      const recordDate = new Date(r.timestamp);
+      return recordDate >= lastSunday && recordDate < thisSunday;
+    });
+    
+    if (weekRecords.length === 0) {
+      return null;
+    }
+    
+    // 统计节点数据（类似日报，但按天分组）
+    const nodeStats = {};
+    const dailyStats = {}; // 按天统计
+    
+    weekRecords.forEach(record => {
+      const recordDate = new Date(record.timestamp).toISOString().split('T')[0];
+      
+      if (!dailyStats[recordDate]) {
+        dailyStats[recordDate] = {
+          total: 0,
+          online: 0,
+          checks: 0
+        };
+      }
+      
+      record.nodes.forEach(node => {
+        if (!nodeStats[node.id]) {
+          nodeStats[node.id] = {
+            id: node.id,
+            name: node.name,
+            role: node.role,
+            checks: 0,
+            online: 0,
+            offline: 0,
+            totalResponseTime: 0,
+            responseTimeCount: 0
+          };
+        }
+        
+        const stats = nodeStats[node.id];
+        stats.checks++;
+        
+        if (node.online) {
+          stats.online++;
+          dailyStats[recordDate].online++;
+          if (node.responseTime) {
+            stats.totalResponseTime += node.responseTime;
+            stats.responseTimeCount++;
+          }
+        } else {
+          stats.offline++;
+        }
+        
+        dailyStats[recordDate].total++;
+        dailyStats[recordDate].checks++;
+      });
+    });
+    
+    // 计算汇总
+    let totalChecks = 0;
+    let totalOnline = 0;
+    let totalResponseTime = 0;
+    let responseTimeCount = 0;
+    
+    Object.values(nodeStats).forEach(stats => {
+      totalChecks += stats.checks;
+      totalOnline += stats.online;
+      totalResponseTime += stats.totalResponseTime;
+      responseTimeCount += stats.responseTimeCount;
+    });
+    
+    const avgOnlineRate = totalChecks > 0 ? (totalOnline / totalChecks * 100).toFixed(2) : 0;
+    const avgResponseTime = responseTimeCount > 0 ? (totalResponseTime / responseTimeCount).toFixed(2) : 0;
+    
+    // 生成每日趋势
+    const dailyTrend = Object.entries(dailyStats).map(([date, stats]) => ({
+      date: date,
+      onlineRate: stats.checks > 0 ? (stats.online / stats.total * 100).toFixed(2) : 0,
+      totalChecks: stats.checks,
+      onlineCount: Math.round(stats.online / (stats.total / stats.checks))
+    }));
+    
+    // 生成节点列表
+    const nodeList = Object.values(nodeStats).map(stats => ({
+      ...stats,
+      onlineRate: stats.checks > 0 ? (stats.online / stats.checks * 100).toFixed(2) : 0,
+      avgResponseTime: stats.responseTimeCount > 0 ? (stats.totalResponseTime / stats.responseTimeCount).toFixed(2) : 0
+    }));
+    
+    // 读取上周的告警记录
+    let alertCount = 0;
+    if (fs.existsSync(alertsHistoryPath)) {
+      const alertData = JSON.parse(fs.readFileSync(alertsHistoryPath, 'utf8'));
+      const weekAlerts = (alertData.alerts || []).filter(a => {
+        const alertDate = new Date(a.timestamp);
+        return alertDate >= lastSunday && alertDate < thisSunday;
+      });
+      alertCount = weekAlerts.length;
+    }
+    
+    const report = {
+      id: 'weekly-' + lastSunday.toISOString().split('T')[0],
+      type: 'weekly',
+      weekStart: lastSunday.toISOString().split('T')[0],
+      weekEnd: new Date(thisSunday.getTime() - 24*60*60*1000).toISOString().split('T')[0],
+      generatedAt: now.toISOString(),
+      summary: {
+        totalNodes: Object.keys(nodeStats).length,
+        avgOnlineRate: parseFloat(avgOnlineRate),
+        avgResponseTime: parseFloat(avgResponseTime),
+        totalChecks: totalChecks,
+        totalOnline: totalOnline,
+        alertCount: alertCount,
+        days: Object.keys(dailyStats).length
+      },
+      nodes: nodeList,
+      dailyTrend: dailyTrend,
+      period: {
+        start: lastSunday.toISOString(),
+        end: thisSunday.toISOString()
+      }
+    };
+    
+    // 保存报告
+    saveWeeklyReport(report);
+    
+    console.log(`📊 周报生成完成：${lastSunday.toISOString().split('T')[0]} 至 ${report.weekEnd}`);
+    
+    return report;
+  } catch (err) {
+    console.error('❌ 生成周报失败:', err.message);
+    return null;
+  }
+}
+
+/**
+ * 保存日报
+ */
+function saveDailyReport(report) {
+  try {
+    let data;
+    if (fs.existsSync(dailyReportsPath)) {
+      data = JSON.parse(fs.readFileSync(dailyReportsPath, 'utf8'));
+    } else {
+      data = { version: '1.0', createdAt: new Date().toISOString(), reports: [] };
+    }
+    
+    // 检查是否已存在该日期的报告
+    const existingIndex = data.reports.findIndex(r => r.id === report.id);
+    if (existingIndex >= 0) {
+      data.reports[existingIndex] = report;
+    } else {
+      data.reports.unshift(report);
+    }
+    
+    // 限制报告数量（保留最近 90 天）
+    if (data.reports.length > 90) {
+      data.reports = data.reports.slice(0, 90);
+    }
+    
+    fs.writeFileSync(dailyReportsPath, JSON.stringify(data, null, 2));
+  } catch (err) {
+    console.warn('⚠️ 保存日报失败:', err.message);
+  }
+}
+
+/**
+ * 保存周报
+ */
+function saveWeeklyReport(report) {
+  try {
+    let data;
+    if (fs.existsSync(weeklyReportsPath)) {
+      data = JSON.parse(fs.readFileSync(weeklyReportsPath, 'utf8'));
+    } else {
+      data = { version: '1.0', createdAt: new Date().toISOString(), reports: [] };
+    }
+    
+    // 检查是否已存在该周的报告
+    const existingIndex = data.reports.findIndex(r => r.id === report.id);
+    if (existingIndex >= 0) {
+      data.reports[existingIndex] = report;
+    } else {
+      data.reports.unshift(report);
+    }
+    
+    // 限制报告数量（保留最近 52 周）
+    if (data.reports.length > 52) {
+      data.reports = data.reports.slice(0, 52);
+    }
+    
+    fs.writeFileSync(weeklyReportsPath, JSON.stringify(data, null, 2));
+  } catch (err) {
+    console.warn('⚠️ 保存周报失败:', err.message);
+  }
+}
+
+/**
+ * 发送飞书报告
+ */
+async function sendFeishuReport(report) {
+  try {
+    if (!reportsConfig.feishuWebhook) {
+      console.log('⚠️ 未配置飞书 webhook，跳过报告发送');
+      return false;
+    }
+    
+    const isDaily = report.type === 'daily';
+    const title = isDaily ? '📊 节点监控日报' : '📈 节点监控周报';
+    const periodText = isDaily 
+      ? `统计周期：${report.period.start.split('T')[0]} 至 ${report.period.end.split('T')[0]}`
+      : `统计周期：${report.weekStart} 至 ${report.weekEnd}`;
+    
+    // 构建飞书消息卡片
+    const message = {
+      msg_type: 'interactive',
+      card: {
+        config: {
+          wide_screen_mode: true
+        },
+        header: {
+          template: isDaily ? 'blue' : 'purple',
+          title: {
+            tag: 'plain_text',
+            content: title
+          }
+        },
+        elements: [
+          {
+            tag: 'div',
+            text: {
+              tag: 'lark_md',
+              content: `**📋 概览**\n${periodText}`
+            }
+          },
+          {
+            tag: 'div',
+            text: {
+              tag: 'lark_md',
+              content: `**🔹 节点总数：** ${report.summary.totalNodes}\n**🔹 平均在线率：** ${report.summary.avgOnlineRate}%\n**🔹 平均响应时间：** ${report.summary.avgResponseTime}ms\n**🔹 告警次数：** ${report.summary.alertCount}`
+            }
+          },
+          {
+            tag: 'hr'
+          },
+          {
+            tag: 'div',
+            text: {
+              tag: 'lark_md',
+              content: `**💡 健康检查总数：** ${report.summary.totalChecks}\n**💡 在线次数：** ${report.summary.totalOnline}`
+            }
+          },
+          {
+            tag: 'action',
+            actions: [
+              {
+                tag: 'button',
+                text: {
+                  tag: 'plain_text',
+                  content: '🌐 查看监控面板'
+                },
+                url: 'http://localhost:3000',
+                type: 'primary'
+              }
+            ]
+          }
+        ]
+      }
+    };
+    
+    const response = await fetch(reportsConfig.feishuWebhook, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(message)
+    });
+    
+    const result = await response.json();
+    
+    if (result.StatusCode === 0 || result.code === 0) {
+      console.log(`✅ 飞书${isDaily ? '日报' : '周报'}发送成功`);
+      return true;
+    } else {
+      console.warn('⚠️ 飞书报告发送失败:', result);
+      return false;
+    }
+  } catch (err) {
+    console.error('❌ 发送飞书报告失败:', err.message);
+    return false;
+  }
+}
+
+/**
+ * 调度报告任务
+ */
+function scheduleReports() {
+  if (!reportsConfig.enabled) {
+    console.log('⚠️ 自动报告已禁用');
+    return;
+  }
+  
+  const now = new Date();
+  
+  // 计算到下一个日报时间的延迟（毫秒）
+  const [dailyHour, dailyMinute] = reportsConfig.dailyTime.split(':').map(Number);
+  const nextDaily = new Date(now);
+  nextDaily.setHours(dailyHour, dailyMinute, 0, 0);
+  if (nextDaily <= now) {
+    nextDaily.setDate(nextDaily.getDate() + 1);
+  }
+  const dailyDelay = nextDaily.getTime() - now.getTime();
+  
+  // 计算到下一个周报时间的延迟（毫秒）
+  const [weeklyHour, weeklyMinute] = reportsConfig.weeklyTime.split(':').map(Number);
+  const nextWeekly = new Date(now);
+  nextWeekly.setHours(weeklyHour, weeklyMinute, 0, 0);
+  const daysUntilWeekly = (reportsConfig.weeklyDay - nextWeekly.getDay() + 7) % 7;
+  if (daysUntilWeekly === 0 && nextWeekly <= now) {
+    nextWeekly.setDate(nextWeekly.getDate() + 7);
+  } else {
+    nextWeekly.setDate(nextWeekly.getDate() + daysUntilWeekly);
+  }
+  const weeklyDelay = nextWeekly.getTime() - now.getTime();
+  
+  console.log(`⏰ 日报调度：${nextDaily.toLocaleString('zh-CN')}（${Math.round(dailyDelay/1000/60)} 分钟后）`);
+  console.log(`⏰ 周报调度：${nextWeekly.toLocaleString('zh-CN')}（${Math.round(weeklyDelay/1000/60/60)} 小时后）`);
+  
+  // 设置日报定时器
+  if (dailyReportTimer) clearTimeout(dailyReportTimer);
+  dailyReportTimer = setTimeout(() => {
+    console.log('📝 开始生成日报...');
+    const report = generateDailyReport();
+    if (report && reportsConfig.sendViaFeishu) {
+      sendFeishuReport(report);
+    }
+    // 重新调度（每天）
+    scheduleReports();
+  }, dailyDelay);
+  
+  // 设置周报定时器
+  if (weeklyReportTimer) clearTimeout(weeklyReportTimer);
+  weeklyReportTimer = setTimeout(() => {
+    console.log('📝 开始生成周报...');
+    const report = generateWeeklyReport();
+    if (report && reportsConfig.sendViaFeishu) {
+      sendFeishuReport(report);
+    }
+    // 重新调度（每周）
+    scheduleReports();
+  }, weeklyDelay);
 }
 
 // 记录告警历史
@@ -1744,6 +2327,233 @@ app.post('/api/alerts/history/clear', (req, res) => {
 });
 
 /**
+ * API: 获取日报列表
+ * GET /api/reports/daily?limit=30
+ */
+app.get('/api/reports/daily', (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 30, 90);
+    
+    if (!fs.existsSync(dailyReportsPath)) {
+      return res.json({
+        success: true,
+        data: {
+          reports: [],
+          total: 0
+        }
+      });
+    }
+    
+    const data = JSON.parse(fs.readFileSync(dailyReportsPath, 'utf8'));
+    const reports = (data.reports || []).slice(0, limit);
+    
+    res.json({
+      success: true,
+      data: {
+        reports,
+        total: reports.length,
+        limit
+      }
+    });
+  } catch (err) {
+    console.error('❌ 获取日报列表失败:', err.message);
+    res.status(500).json({
+      success: false,
+      error: '获取日报列表失败：' + err.message
+    });
+  }
+});
+
+/**
+ * API: 获取周报列表
+ * GET /api/reports/weekly?limit=12
+ */
+app.get('/api/reports/weekly', (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 12, 52);
+    
+    if (!fs.existsSync(weeklyReportsPath)) {
+      return res.json({
+        success: true,
+        data: {
+          reports: [],
+          total: 0
+        }
+      });
+    }
+    
+    const data = JSON.parse(fs.readFileSync(weeklyReportsPath, 'utf8'));
+    const reports = (data.reports || []).slice(0, limit);
+    
+    res.json({
+      success: true,
+      data: {
+        reports,
+        total: reports.length,
+        limit
+      }
+    });
+  } catch (err) {
+    console.error('❌ 获取周报列表失败:', err.message);
+    res.status(500).json({
+      success: false,
+      error: '获取周报列表失败：' + err.message
+    });
+  }
+});
+
+/**
+ * API: 获取单个报告详情
+ * GET /api/reports/:type/:id
+ */
+app.get('/api/reports/:type/:id', (req, res) => {
+  try {
+    const { type, id } = req.params;
+    const filePath = type === 'daily' ? dailyReportsPath : weeklyReportsPath;
+    
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({
+        success: false,
+        error: '报告文件不存在'
+      });
+    }
+    
+    const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    const report = (data.reports || []).find(r => r.id === id);
+    
+    if (!report) {
+      return res.status(404).json({
+        success: false,
+        error: '报告不存在'
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: report
+    });
+  } catch (err) {
+    console.error('❌ 获取报告详情失败:', err.message);
+    res.status(500).json({
+      success: false,
+      error: '获取报告详情失败：' + err.message
+    });
+  }
+});
+
+/**
+ * API: 手动生成报告
+ * POST /api/reports/generate
+ */
+app.post('/api/reports/generate', async (req, res) => {
+  try {
+    const { type } = req.body;
+    
+    if (!type || !['daily', 'weekly'].includes(type)) {
+      return res.status(400).json({
+        success: false,
+        error: '无效的报告类型，必须是 daily 或 weekly'
+      });
+    }
+    
+    let report;
+    if (type === 'daily') {
+      report = generateDailyReport();
+    } else {
+      report = generateWeeklyReport();
+    }
+    
+    if (!report) {
+      return res.status(400).json({
+        success: false,
+        error: '没有足够的数据生成报告'
+      });
+    }
+    
+    // 如果配置了飞书，尝试发送
+    let sentViaFeishu = false;
+    if (reportsConfig.sendViaFeishu && reportsConfig.feishuWebhook) {
+      sentViaFeishu = await sendFeishuReport(report);
+    }
+    
+    res.json({
+      success: true,
+      data: report,
+      sentViaFeishu
+    });
+  } catch (err) {
+    console.error('❌ 生成报告失败:', err.message);
+    res.status(500).json({
+      success: false,
+      error: '生成报告失败：' + err.message
+    });
+  }
+});
+
+/**
+ * API: 获取报告配置
+ * GET /api/reports/config
+ */
+app.get('/api/reports/config', (req, res) => {
+  try {
+    res.json({
+      success: true,
+      data: {
+        enabled: reportsConfig.enabled,
+        dailyTime: reportsConfig.dailyTime,
+        weeklyDay: reportsConfig.weeklyDay,
+        weeklyTime: reportsConfig.weeklyTime,
+        sendViaFeishu: reportsConfig.sendViaFeishu,
+        hasWebhook: !!reportsConfig.feishuWebhook
+      }
+    });
+  } catch (err) {
+    console.error('❌ 获取报告配置失败:', err.message);
+    res.status(500).json({
+      success: false,
+      error: '获取报告配置失败：' + err.message
+    });
+  }
+});
+
+/**
+ * API: 更新报告配置
+ * POST /api/reports/config
+ */
+app.post('/api/reports/config', (req, res) => {
+  try {
+    const { enabled, dailyTime, weeklyDay, weeklyTime, sendViaFeishu } = req.body;
+    
+    if (enabled !== undefined) reportsConfig.enabled = enabled;
+    if (dailyTime) reportsConfig.dailyTime = dailyTime;
+    if (weeklyDay !== undefined) reportsConfig.weeklyDay = weeklyDay;
+    if (weeklyTime) reportsConfig.weeklyTime = weeklyTime;
+    if (sendViaFeishu !== undefined) reportsConfig.sendViaFeishu = sendViaFeishu;
+    
+    // 重新调度报告任务
+    scheduleReports();
+    
+    res.json({
+      success: true,
+      message: '报告配置已更新',
+      data: {
+        enabled: reportsConfig.enabled,
+        dailyTime: reportsConfig.dailyTime,
+        weeklyDay: reportsConfig.weeklyDay,
+        weeklyTime: reportsConfig.weeklyTime,
+        sendViaFeishu: reportsConfig.sendViaFeishu
+      }
+    });
+  } catch (err) {
+    console.error('❌ 更新报告配置失败:', err.message);
+    res.status(500).json({
+      success: false,
+      error: '更新报告配置失败：' + err.message
+    });
+  }
+});
+
+/**
  * API: 获取实时日志
  * GET /api/logs?level=INFO&limit=50&source=SYSTEM
  */
@@ -2260,6 +3070,9 @@ server.listen(PORT, () => {
   
   // 初始化告警系统
   initAlertsSystem();
+  
+  // 初始化报告系统
+  initReportsSystem();
   
   // 启动健康检查调度器
   startHealthCheckScheduler();

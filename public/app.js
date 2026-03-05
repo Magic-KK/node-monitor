@@ -406,6 +406,9 @@ async function init() {
   // 初始化快速操作
   initQuickActions();
   
+  // 初始化报告功能
+  initReports();
+  
   console.log('✅ SYSTEM ONLINE');
 }
 
@@ -1245,6 +1248,12 @@ function bindEvents() {
   const historyBtn = document.getElementById('historyBtn');
   if (historyBtn) {
     historyBtn.addEventListener('click', openHistoryModal);
+  }
+  
+  // 自动化报告按钮
+  const reportsBtn = document.getElementById('reportsBtn');
+  if (reportsBtn) {
+    reportsBtn.addEventListener('click', openReportsModal);
   }
   
   // 自动刷新开关
@@ -4595,6 +4604,555 @@ function initQuickActions() {
       const modal = document.getElementById('quickActionsModal');
       if (modal && modal.style.display === 'flex') {
         closeQuickActionsModal();
+      }
+    }
+  });
+}
+
+// ===== 自动化报告功能 =====
+
+/**
+ * 打开报告弹窗
+ */
+function openReportsModal() {
+  const modal = document.getElementById('reportsModal');
+  if (modal) {
+    modal.style.display = 'flex';
+    // 加载日报列表
+    loadDailyReports();
+    // 加载周报列表
+    loadWeeklyReports();
+    // 加载报告配置
+    loadReportsConfig();
+  }
+}
+
+/**
+ * 关闭报告弹窗
+ */
+function closeReportsModalFunc() {
+  const modal = document.getElementById('reportsModal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
+/**
+ * 加载日报列表
+ */
+async function loadDailyReports() {
+  try {
+    const container = document.getElementById('dailyReportsList');
+    if (!container) return;
+    
+    container.innerHTML = '<div class="loading-state">加载中...</div>';
+    
+    const response = await fetch('/api/reports/daily?limit=30');
+    const result = await response.json();
+    
+    if (result.success && result.data.reports.length > 0) {
+      container.innerHTML = result.data.reports.map(report => `
+        <div class="report-card daily" onclick="viewReportDetail('daily', '${report.id}')">
+          <div class="report-header">
+            <span class="report-title">📋 日报 - ${report.date}</span>
+            <span class="report-date">${new Date(report.generatedAt).toLocaleString('zh-CN')}</span>
+          </div>
+          <div class="report-stats">
+            <div class="report-stat">
+              <span class="report-stat-value">${report.summary.totalNodes}</span>
+              <span class="report-stat-label">节点数</span>
+            </div>
+            <div class="report-stat">
+              <span class="report-stat-value">${report.summary.avgOnlineRate}%</span>
+              <span class="report-stat-label">平均在线率</span>
+            </div>
+            <div class="report-stat">
+              <span class="report-stat-value">${report.summary.avgResponseTime}ms</span>
+              <span class="report-stat-label">响应时间</span>
+            </div>
+            <div class="report-stat">
+              <span class="report-stat-value">${report.summary.alertCount}</span>
+              <span class="report-stat-label">告警次数</span>
+            </div>
+          </div>
+          <div class="report-actions">
+            <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); viewReportDetail('daily', '${report.id}')">
+              查看详情
+            </button>
+          </div>
+        </div>
+      `).join('');
+    } else {
+      container.innerHTML = '<div class="empty-state">暂无日报数据</div>';
+    }
+  } catch (err) {
+    console.error('加载日报失败:', err);
+    document.getElementById('dailyReportsList').innerHTML = '<div class="error-state">加载失败</div>';
+  }
+}
+
+/**
+ * 加载周报列表
+ */
+async function loadWeeklyReports() {
+  try {
+    const container = document.getElementById('weeklyReportsList');
+    if (!container) return;
+    
+    container.innerHTML = '<div class="loading-state">加载中...</div>';
+    
+    const response = await fetch('/api/reports/weekly?limit=12');
+    const result = await response.json();
+    
+    if (result.success && result.data.reports.length > 0) {
+      container.innerHTML = result.data.reports.map(report => `
+        <div class="report-card weekly" onclick="viewReportDetail('weekly', '${report.id}')">
+          <div class="report-header">
+            <span class="report-title">📈 周报 - ${report.weekStart} 至 ${report.weekEnd}</span>
+            <span class="report-date">${new Date(report.generatedAt).toLocaleString('zh-CN')}</span>
+          </div>
+          <div class="report-stats">
+            <div class="report-stat">
+              <span class="report-stat-value">${report.summary.totalNodes}</span>
+              <span class="report-stat-label">节点数</span>
+            </div>
+            <div class="report-stat">
+              <span class="report-stat-value">${report.summary.avgOnlineRate}%</span>
+              <span class="report-stat-label">平均在线率</span>
+            </div>
+            <div class="report-stat">
+              <span class="report-stat-value">${report.summary.avgResponseTime}ms</span>
+              <span class="report-stat-label">响应时间</span>
+            </div>
+            <div class="report-stat">
+              <span class="report-stat-value">${report.summary.days}天</span>
+              <span class="report-stat-label">统计天数</span>
+            </div>
+          </div>
+          <div class="report-actions">
+            <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); viewReportDetail('weekly', '${report.id}')">
+              查看详情
+            </button>
+          </div>
+        </div>
+      `).join('');
+    } else {
+      container.innerHTML = '<div class="empty-state">暂无周报数据</div>';
+    }
+  } catch (err) {
+    console.error('加载周报失败:', err);
+    document.getElementById('weeklyReportsList').innerHTML = '<div class="error-state">加载失败</div>';
+  }
+}
+
+/**
+ * 查看报告详情
+ */
+async function viewReportDetail(type, id) {
+  try {
+    const response = await fetch(`/api/reports/${type}/${id}`);
+    const result = await response.json();
+    
+    if (!result.success) {
+      showError('获取报告详情失败');
+      return;
+    }
+    
+    const report = result.data;
+    const isDaily = type === 'daily';
+    
+    // 创建详情视图
+    const container = document.getElementById(isDaily ? 'dailyReportsList' : 'weeklyReportsList');
+    const detailView = document.createElement('div');
+    detailView.className = 'report-detail-view';
+    detailView.innerHTML = `
+      <div class="report-detail-header">
+        <h3>${isDaily ? '📋 日报详情' : '📈 周报详情'} - ${isDaily ? report.date : report.weekStart + ' 至 ' + report.weekEnd}</h3>
+        <button class="btn btn-sm btn-secondary" onclick="closeReportDetail('${type}')">返回</button>
+      </div>
+      
+      <div class="report-stats">
+        <div class="report-stat">
+          <span class="report-stat-value">${report.summary.totalNodes}</span>
+          <span class="report-stat-label">节点总数</span>
+        </div>
+        <div class="report-stat">
+          <span class="report-stat-value">${report.summary.avgOnlineRate}%</span>
+          <span class="report-stat-label">平均在线率</span>
+        </div>
+        <div class="report-stat">
+          <span class="report-stat-value">${report.summary.avgResponseTime}ms</span>
+          <span class="report-stat-label">平均响应时间</span>
+        </div>
+        <div class="report-stat">
+          <span class="report-stat-value">${report.summary.alertCount}</span>
+          <span class="report-stat-label">告警次数</span>
+        </div>
+        <div class="report-stat">
+          <span class="report-stat-value">${report.summary.totalChecks}</span>
+          <span class="report-stat-label">健康检查</span>
+        </div>
+        <div class="report-stat">
+          <span class="report-stat-value">${report.summary.totalOnline}</span>
+          <span class="report-stat-label">在线次数</span>
+        </div>
+      </div>
+      
+      ${!isDaily && report.dailyTrend ? `
+        <div class="report-trend-chart">
+          <canvas id="weeklyTrendChart"></canvas>
+        </div>
+      ` : ''}
+      
+      <h4 style="margin: 20px 0 10px; color: var(--text-primary);">📊 节点详情</h4>
+      <table class="report-nodes-table">
+        <thead>
+          <tr>
+            <th>节点名称</th>
+            <th>角色</th>
+            <th>检查次数</th>
+            <th>在线率</th>
+            <th>平均响应时间</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${report.nodes.map(node => `
+            <tr>
+              <td>${node.name}</td>
+              <td>${node.role}</td>
+              <td>${node.checks}</td>
+              <td style="color: ${parseFloat(node.onlineRate) >= 95 ? 'var(--neon-green)' : parseFloat(node.onlineRate) >= 80 ? 'var(--neon-yellow)' : 'var(--neon-red)'}">${node.onlineRate}%</td>
+              <td>${node.avgResponseTime}ms</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+    
+    // 替换列表为详情视图
+    container.innerHTML = '';
+    container.appendChild(detailView);
+    
+    // 如果是周报，绘制趋势图
+    if (!isDaily && report.dailyTrend && report.dailyTrend.length > 0) {
+      drawWeeklyTrendChart(report.dailyTrend);
+    }
+  } catch (err) {
+    console.error('查看报告详情失败:', err);
+    showError('获取报告详情失败');
+  }
+}
+
+/**
+ * 关闭报告详情
+ */
+function closeReportDetail(type) {
+  if (type === 'daily') {
+    loadDailyReports();
+  } else {
+    loadWeeklyReports();
+  }
+}
+
+/**
+ * 绘制周趋势图
+ */
+function drawWeeklyTrendChart(dailyTrend) {
+  const canvas = document.getElementById('weeklyTrendChart');
+  if (!canvas) return;
+  
+  const ctx = canvas.getContext('2d');
+  const container = canvas.parentElement;
+  canvas.width = container.offsetWidth - 30;
+  canvas.height = container.offsetHeight - 30;
+  
+  const padding = 40;
+  const chartWidth = canvas.width - padding * 2;
+  const chartHeight = canvas.height - padding * 2;
+  
+  // 清空画布
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  // 获取数据
+  const labels = dailyTrend.map(d => d.date.split('-').slice(1).join('/'));
+  const values = dailyTrend.map(d => parseFloat(d.onlineRate));
+  const maxValue = 100;
+  
+  // 绘制网格
+  ctx.strokeStyle = 'rgba(0, 245, 255, 0.1)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = padding + (chartHeight / 4) * i;
+    ctx.beginPath();
+    ctx.moveTo(padding, y);
+    ctx.lineTo(canvas.width - padding, y);
+    ctx.stroke();
+  }
+  
+  // 绘制折线
+  ctx.strokeStyle = '#00f5ff';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  
+  const points = [];
+  values.forEach((value, index) => {
+    const x = padding + (chartWidth / (values.length - 1)) * index;
+    const y = padding + chartHeight - (value / maxValue) * chartHeight;
+    points.push({ x, y });
+    
+    if (index === 0) {
+      ctx.moveTo(x, y);
+    } else {
+      ctx.lineTo(x, y);
+    }
+  });
+  ctx.stroke();
+  
+  // 绘制数据点
+  points.forEach((point, index) => {
+    ctx.fillStyle = '#00f5ff';
+    ctx.beginPath();
+    ctx.arc(point.x, point.y, 4, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 绘制数值标签
+    ctx.fillStyle = 'var(--text-secondary)';
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(values[index].toFixed(1) + '%', point.x, point.y - 10);
+    
+    // 绘制日期标签
+    ctx.fillText(labels[index], point.x, canvas.height - padding + 15);
+  });
+  
+  // 绘制 Y 轴标签
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 4; i++) {
+    const value = maxValue - (maxValue / 4) * i;
+    const y = padding + (chartHeight / 4) * i;
+    ctx.fillText(value.toFixed(0) + '%', padding - 5, y + 3);
+  }
+}
+
+/**
+ * 加载报告配置
+ */
+async function loadReportsConfig() {
+  try {
+    const response = await fetch('/api/reports/config');
+    const result = await response.json();
+    
+    if (result.success) {
+      const config = result.data;
+      
+      const reportsEnabled = document.getElementById('reportsEnabled');
+      if (reportsEnabled) reportsEnabled.checked = config.enabled;
+      
+      const dailyTimeInput = document.getElementById('dailyTimeInput');
+      if (dailyTimeInput) dailyTimeInput.value = config.dailyTime;
+      
+      const weeklyDayInput = document.getElementById('weeklyDayInput');
+      if (weeklyDayInput) weeklyDayInput.value = config.weeklyDay;
+      
+      const weeklyTimeInput = document.getElementById('weeklyTimeInput');
+      if (weeklyTimeInput) weeklyTimeInput.value = config.weeklyTime;
+      
+      const sendViaFeishu = document.getElementById('sendViaFeishu');
+      if (sendViaFeishu) sendViaFeishu.checked = config.sendViaFeishu;
+    }
+  } catch (err) {
+    console.error('加载报告配置失败:', err);
+  }
+}
+
+/**
+ * 保存报告配置
+ */
+async function saveReportsConfig() {
+  try {
+    const config = {
+      enabled: document.getElementById('reportsEnabled').checked,
+      dailyTime: document.getElementById('dailyTimeInput').value,
+      weeklyDay: parseInt(document.getElementById('weeklyDayInput').value),
+      weeklyTime: document.getElementById('weeklyTimeInput').value,
+      sendViaFeishu: document.getElementById('sendViaFeishu').checked
+    };
+    
+    const response = await fetch('/api/reports/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(config)
+    });
+    
+    const result = await response.json();
+    
+    const messageBox = document.getElementById('reportsConfigMessage');
+    if (messageBox) {
+      messageBox.style.display = 'block';
+      messageBox.className = 'message-box ' + (result.success ? 'success' : 'error');
+      messageBox.textContent = result.message || (result.success ? '配置已保存' : '保存失败');
+      
+      setTimeout(() => {
+        messageBox.style.display = 'none';
+      }, 3000);
+    }
+    
+    if (result.success) {
+      playSound('success');
+    } else {
+      playSound('error');
+    }
+  } catch (err) {
+    console.error('保存报告配置失败:', err);
+    showError('保存配置失败');
+  }
+}
+
+/**
+ * 生成日报
+ */
+async function generateDailyReport() {
+  try {
+    const btn = document.getElementById('generateDailyReportBtn');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span class="btn-icon">⏳</span> 生成中...';
+    }
+    
+    const response = await fetch('/api/reports/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'daily' })
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      showNotification('日报生成成功' + (result.sentViaFeishu ? '，已发送飞书' : ''));
+      playSound('success');
+      loadDailyReports();
+    } else {
+      showError(result.error || '生成失败');
+      playSound('error');
+    }
+  } catch (err) {
+    console.error('生成日报失败:', err);
+    showError('生成失败');
+  } finally {
+    const btn = document.getElementById('generateDailyReportBtn');
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<span class="btn-icon">🔄</span> 生成今日日报';
+    }
+  }
+}
+
+/**
+ * 生成周报
+ */
+async function generateWeeklyReport() {
+  try {
+    const btn = document.getElementById('generateWeeklyReportBtn');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span class="btn-icon">⏳</span> 生成中...';
+    }
+    
+    const response = await fetch('/api/reports/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'weekly' })
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      showNotification('周报生成成功' + (result.sentViaFeishu ? '，已发送飞书' : ''));
+      playSound('success');
+      loadWeeklyReports();
+    } else {
+      showError(result.error || '生成失败');
+      playSound('error');
+    }
+  } catch (err) {
+    console.error('生成周报失败:', err);
+    showError('生成失败');
+  } finally {
+    const btn = document.getElementById('generateWeeklyReportBtn');
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<span class="btn-icon">🔄</span> 生成本周周报';
+    }
+  }
+}
+
+/**
+ * 初始化报告功能
+ */
+function initReports() {
+  // 报告弹窗按钮
+  const closeReportsModal = document.getElementById('closeReportsModal');
+  if (closeReportsModal) {
+    closeReportsModal.addEventListener('click', closeReportsModalFunc);
+  }
+  
+  // 点击弹窗外部关闭
+  const modal = document.getElementById('reportsModal');
+  if (modal) {
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        closeReportsModalFunc();
+      }
+    });
+  }
+  
+  // 标签页切换
+  document.querySelectorAll('#reportsModal .tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tab = btn.dataset.tab;
+      
+      document.querySelectorAll('#reportsModal .tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('#reportsModal .tab-content').forEach(c => c.classList.remove('active'));
+      
+      btn.classList.add('active');
+      document.getElementById('tab-' + tab)?.classList.add('active');
+    });
+  });
+  
+  // 刷新按钮
+  const refreshDailyBtn = document.getElementById('refreshDailyReportsBtn');
+  if (refreshDailyBtn) {
+    refreshDailyBtn.addEventListener('click', loadDailyReports);
+  }
+  
+  const refreshWeeklyBtn = document.getElementById('refreshWeeklyReportsBtn');
+  if (refreshWeeklyBtn) {
+    refreshWeeklyBtn.addEventListener('click', loadWeeklyReports);
+  }
+  
+  // 生成按钮
+  const generateDailyBtn = document.getElementById('generateDailyReportBtn');
+  if (generateDailyBtn) {
+    generateDailyBtn.addEventListener('click', generateDailyReport);
+  }
+  
+  const generateWeeklyBtn = document.getElementById('generateWeeklyReportBtn');
+  if (generateWeeklyBtn) {
+    generateWeeklyBtn.addEventListener('click', generateWeeklyReport);
+  }
+  
+  // 保存配置按钮
+  const saveReportsConfigBtn = document.getElementById('saveReportsConfigBtn');
+  if (saveReportsConfigBtn) {
+    saveReportsConfigBtn.addEventListener('click', saveReportsConfig);
+  }
+  
+  // ESC 键关闭弹窗
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const modal = document.getElementById('reportsModal');
+      if (modal && modal.style.display === 'flex') {
+        closeReportsModalFunc();
       }
     }
   });

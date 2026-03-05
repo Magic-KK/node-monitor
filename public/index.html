@@ -154,6 +154,10 @@
         <span class="btn-icon">📈</span>
         历史趋势
       </button>
+      <button id="reportsBtn" class="btn btn-info">
+        <span class="btn-icon">📊</span>
+        自动化报告
+      </button>
       <button id="alertsBtn" class="btn btn-danger">
         <span class="btn-icon">🚨</span>
         告警管理
@@ -437,6 +441,116 @@
         </div>
 
         <div id="alertsHistoryMessage" class="message-box" style="display: none;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 自动化报告弹窗 -->
+  <div id="reportsModal" class="modal">
+    <div class="modal-content modal-content-large">
+      <div class="modal-header">
+        <h2>📊 自动化报告</h2>
+        <button id="closeReportsModal" class="modal-close" title="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <!-- 标签页导航 -->
+        <div class="settings-tabs">
+          <button class="tab-btn active" data-tab="reports-daily">📋 日报</button>
+          <button class="tab-btn" data-tab="reports-weekly">📈 周报</button>
+          <button class="tab-btn" data-tab="reports-config">⚙️ 配置</button>
+        </div>
+
+        <!-- 日报标签页 -->
+        <div class="tab-content active" id="tab-reports-daily">
+          <div class="history-filters">
+            <button id="generateDailyReportBtn" class="btn btn-primary">
+              <span class="btn-icon">🔄</span>
+              生成今日日报
+            </button>
+            <button id="refreshDailyReportsBtn" class="btn btn-secondary">
+              <span class="btn-icon">🔄</span>
+              刷新列表
+            </button>
+          </div>
+
+          <div class="reports-list" id="dailyReportsList">
+            <!-- 日报列表动态生成 -->
+            <div class="loading-state">加载中...</div>
+          </div>
+        </div>
+
+        <!-- 周报标签页 -->
+        <div class="tab-content" id="tab-reports-weekly">
+          <div class="history-filters">
+            <button id="generateWeeklyReportBtn" class="btn btn-primary">
+              <span class="btn-icon">🔄</span>
+              生成本周周报
+            </button>
+            <button id="refreshWeeklyReportsBtn" class="btn btn-secondary">
+              <span class="btn-icon">🔄</span>
+              刷新列表
+            </button>
+          </div>
+
+          <div class="reports-list" id="weeklyReportsList">
+            <!-- 周报列表动态生成 -->
+            <div class="loading-state">加载中...</div>
+          </div>
+        </div>
+
+        <!-- 配置标签页 -->
+        <div class="tab-content" id="tab-reports-config">
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="reportsEnabled">
+              <span>启用自动报告</span>
+            </label>
+            <small class="form-hint">开启后系统会自动生成日报和周报</small>
+          </div>
+
+          <div class="form-group">
+            <label for="dailyTimeInput">日报发送时间</label>
+            <input type="time" id="dailyTimeInput" class="form-input" value="23:59">
+            <small class="form-hint">每天在此时间自动生成日报</small>
+          </div>
+
+          <div class="form-group">
+            <label for="weeklyDayInput">周报发送星期</label>
+            <select id="weeklyDayInput" class="form-select">
+              <option value="0">周日</option>
+              <option value="1">周一</option>
+              <option value="2">周二</option>
+              <option value="3">周三</option>
+              <option value="4">周四</option>
+              <option value="5">周五</option>
+              <option value="6">周六</option>
+            </select>
+            <small class="form-hint">每周在此星期的指定时间生成周报</small>
+          </div>
+
+          <div class="form-group">
+            <label for="weeklyTimeInput">周报发送时间</label>
+            <input type="time" id="weeklyTimeInput" class="form-input" value="23:59">
+            <small class="form-hint">每周在指定星期的此时间生成周报</small>
+          </div>
+
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="sendViaFeishu">
+              <span>通过飞书发送报告</span>
+            </label>
+            <small class="form-hint">需要先在告警配置中设置飞书 Webhook</small>
+          </div>
+
+          <div class="form-actions">
+            <button id="saveReportsConfigBtn" class="btn btn-success">
+              <span class="btn-icon">💾</span>
+              保存配置
+            </button>
+          </div>
+
+          <div id="reportsConfigMessage" class="message-box" style="display: none;"></div>
+        </div>
       </div>
     </div>
   </div>
