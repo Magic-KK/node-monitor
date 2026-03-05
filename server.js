@@ -7,9 +7,10 @@
  * - 健康检查服务（真实检测，非模拟）
  * - 静态文件服务（前端页面）
  * - 🔒 HTTPS 安全连接支持
+ * - 🔥 配置热更新（无需重启服务即可生效）
  * 
  * @author 牛开发 🐮💻
- * @version 1.28.0 - HTTPS 安全增强版
+ * @version 1.29.0 - 配置热更新增强版
  */
 
 const express = require('express');
@@ -497,6 +498,112 @@ try {
   console.log('✅ 团队配置加载成功:', teamConfig.teamName);
 } catch (err) {
   console.warn('⚠️ 配置文件加载失败，使用默认配置:', err.message);
+}
+
+// ===== 配置热更新系统 =====
+
+/**
+ * 健康检查调度器定时器 ID
+ * 用于动态重启调度器
+ */
+let healthCheckTimerId = null;
+
+/**
+ * 配置变更历史记录（保留最近 50 条）
+ */
+const configChangeHistory = [];
+const MAX_CONFIG_HISTORY = 50;
+
+/**
+ * 记录配置变更
+ * @param {string} type - 变更类型
+ * @param {string} description - 变更描述
+ * @param {Object} changes - 变更内容
+ */
+function logConfigChange(type, description, changes = {}) {
+  const record = {
+    timestamp: Date.now(),
+    type,
+    description,
+    changes,
+    user: 'system'
+  };
+  
+  configChangeHistory.unshift(record);
+  
+  // 限制历史记录数量
+  if (configChangeHistory.length > MAX_CONFIG_HISTORY) {
+    configChangeHistory.pop();
+  }
+  
+  console.log(`🔧 配置变更 [${type}]: ${description}`);
+  
+  // 通过 WebSocket 广播配置变更通知
+  broadcastConfigChange(record);
+}
+
+/**
+ * 广播配置变更到所有 WebSocket 客户端
+ * @param {Object} changeRecord - 变更记录
+ */
+function broadcastConfigChange(changeRecord) {
+  const message = JSON.stringify({
+    type: 'config_change',
+    data: changeRecord
+  });
+  
+  wss.clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(message);
+    }
+  });
+  
+  // 如果启用了 HTTPS WebSocket，也广播到那边
+  if (httpsWss) {
+    httpsWss.clients.forEach(client => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(message);
+      }
+    });
+  }
+}
+
+/**
+ * 重启健康检查调度器
+ * 使用新的检查间隔
+ */
+function restartHealthCheckScheduler() {
+  // 清除旧的定时器
+  if (healthCheckTimerId !== null) {
+    clearInterval(healthCheckTimerId);
+    healthCheckTimerId = null;
+    console.log('⏹️  健康检查调度器已停止');
+  }
+  
+  // 使用新的间隔重新启动
+  const interval = teamConfig.checkInterval || 30000;
+  console.log(`⏰ 重启健康检查调度器，新间隔：${interval / 1000}秒`);
+  
+  // 立即执行一次
+  checkAllNodes().then(statuses => {
+    const onlineCount = statuses.filter(s => s.online).length;
+    const configuredCount = statuses.filter(s => s.configured).length;
+    console.log(`✅ 健康检查（配置更新后）：${onlineCount}/${configuredCount} 节点在线`);
+    saveHistorySnapshot(statuses);
+    broadcastStatusUpdate(statuses);
+  });
+  
+  // 设置新的定时器
+  healthCheckTimerId = setInterval(() => {
+    checkAllNodes().then(statuses => {
+      const onlineCount = statuses.filter(s => s.online).length;
+      const configuredCount = statuses.filter(s => s.configured).length;
+      console.log(`📊 健康检查：${onlineCount}/${configuredCount} 节点在线`);
+      saveHistorySnapshot(statuses);
+      broadcastStatusUpdate(statuses);
+      checkAlerts(statuses);
+    });
+  }, interval);
 }
 
 /**
@@ -1994,20 +2101,85 @@ app.get('/api/node/:id', (req, res) => {
 /**
  * API: 重新加载配置
  * POST /api/reload-config
+ * 
+ * 重新加载 OpenClaw 配置文件，支持热更新
  */
 app.post('/api/reload-config', (req, res) => {
   try {
     // 重新读取 OpenClaw 配置
+    const oldConfig = JSON.parse(JSON.stringify(openclawConfig));
     const newConfig = JSON.parse(fs.readFileSync(openclawConfigPath, 'utf8'));
+    
+    // 检测配置变化
+    const changes = {};
+    const oldAgents = oldConfig?.agents?.list?.length || 0;
+    const newAgents = newConfig?.agents?.list?.length || 0;
+    
+    if (oldAgents !== newAgents) {
+      changes.agentsCount = { old: oldAgents, new: newAgents };
+    }
+    
     openclawConfig = newConfig;
     
     // 清除缓存，强制重新检查
     nodeStatusCache.clear();
     
+    // 记录配置变更
+    logConfigChange('openclaw_reload', 'OpenClaw 配置已重新加载', changes);
+    
     res.json({
       success: true,
-      message: '配置已重新加载',
+      message: '配置已重新加载（热更新）',
+      hotReloaded: true,
+      changes,
       nodesCount: buildRealNodeList().length
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+/**
+ * API: 获取配置变更历史
+ * GET /api/config/history
+ */
+app.get('/api/config/history', cacheMiddleware(5000), (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || MAX_CONFIG_HISTORY;
+    const history = configChangeHistory.slice(0, limit);
+    
+    res.json({
+      success: true,
+      data: {
+        history,
+        total: configChangeHistory.length,
+        maxRecords: MAX_CONFIG_HISTORY
+      }
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+/**
+ * API: 清除配置变更历史
+ * POST /api/config/history/clear
+ */
+app.post('/api/config/history/clear', (req, res) => {
+  try {
+    const clearedCount = configChangeHistory.length;
+    configChangeHistory.length = 0;
+    
+    res.json({
+      success: true,
+      message: '配置变更历史已清除',
+      clearedCount
     });
   } catch (err) {
     res.status(500).json({
@@ -2329,38 +2501,53 @@ app.get('/api/settings', (req, res) => {
 /**
  * API: 更新配置设置
  * POST /api/settings
+ * 
+ * 支持配置热更新，修改后无需重启服务即可生效
  */
 app.post('/api/settings', (req, res) => {
   try {
     const newSettings = req.body;
+    const changes = {};
     
     // 验证并更新配置
     if (newSettings.teamName !== undefined) {
+      const oldVal = teamConfig.teamName;
       teamConfig.teamName = newSettings.teamName;
+      changes.teamName = { old: oldVal, new: newSettings.teamName };
     }
     if (newSettings.checkInterval !== undefined) {
+      const oldVal = teamConfig.checkInterval;
       // 限制在 5 秒到 5 分钟之间
       teamConfig.checkInterval = Math.max(5000, Math.min(300000, parseInt(newSettings.checkInterval)));
+      changes.checkInterval = { old: oldVal, new: teamConfig.checkInterval };
     }
     if (newSettings.timeout !== undefined) {
+      const oldVal = teamConfig.timeout;
       // 限制在 1 秒到 30 秒之间
       teamConfig.timeout = Math.max(1000, Math.min(30000, parseInt(newSettings.timeout)));
+      changes.timeout = { old: oldVal, new: teamConfig.timeout };
     }
     if (newSettings.workspace !== undefined) {
+      const oldVal = teamConfig.workspace;
       teamConfig.workspace = newSettings.workspace;
+      changes.workspace = { old: oldVal, new: newSettings.workspace };
     }
     
     // 保存配置到文件
     fs.writeFileSync(configPath, JSON.stringify(teamConfig, null, 2), 'utf8');
     
-    // 如果检查间隔改变，需要重启调度器（这里简单处理，实际生产环境需要更复杂的逻辑）
+    // 如果检查间隔改变，热更新：重启调度器
     if (newSettings.checkInterval !== undefined) {
-      console.log(`⏰ 检查间隔已更新：${teamConfig.checkInterval / 1000}秒`);
+      restartHealthCheckScheduler();
+      logConfigChange('check_interval', `检查间隔更新：${oldVal / 1000}s → ${teamConfig.checkInterval / 1000}s`, changes);
+    } else if (Object.keys(changes).length > 0) {
+      logConfigChange('settings', '配置设置已更新', changes);
     }
     
     res.json({
       success: true,
-      message: '配置已保存',
+      message: '配置已保存并生效（热更新）',
+      hotReloaded: newSettings.checkInterval !== undefined,
       data: {
         teamName: teamConfig.teamName,
         checkInterval: teamConfig.checkInterval,
@@ -3399,8 +3586,8 @@ function startHealthCheckScheduler() {
     // 初始化时不触发告警（避免启动时大量告警）
   });
   
-  // 定时执行
-  setInterval(() => {
+  // 定时执行（使用全局变量存储定时器 ID）
+  healthCheckTimerId = setInterval(() => {
     checkAllNodes().then(statuses => {
       const onlineCount = statuses.filter(s => s.online).length;
       const configuredCount = statuses.filter(s => s.configured).length;

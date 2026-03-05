@@ -468,6 +468,11 @@ function handleWebSocketMessage(data) {
       handleMetricsUpdate(data.data);
       break;
       
+    case 'config_change':
+      // 配置变更通知（热更新）
+      handleConfigChange(data.data);
+      break;
+      
     case 'pong':
       // 心跳响应
       console.log('🏓 WebSocket 心跳响应');
@@ -2240,6 +2245,12 @@ function bindEvents() {
     cancelSettingsBtn.addEventListener('click', closeSettingsModal);
   }
   
+  // 清除配置历史按钮
+  const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+  if (clearHistoryBtn) {
+    clearHistoryBtn.addEventListener('click', clearConfigHistory);
+  }
+  
   // 保存设置按钮
   const saveSettingsBtn = document.getElementById('saveSettingsBtn');
   if (saveSettingsBtn) {
@@ -3501,6 +3512,12 @@ function switchTab(tabId) {
   if (tabId === 'add-node') {
     if (addNodeBtn) addNodeBtn.style.display = 'inline-flex';
     if (saveSettingsBtn) saveSettingsBtn.style.display = 'none';
+  } else if (tabId === 'history') {
+    // 历史标签页：隐藏保存和添加按钮
+    if (addNodeBtn) addNodeBtn.style.display = 'none';
+    if (saveSettingsBtn) saveSettingsBtn.style.display = 'none';
+    // 加载配置历史
+    loadConfigHistory();
   } else {
     if (addNodeBtn) addNodeBtn.style.display = 'none';
     if (saveSettingsBtn) saveSettingsBtn.style.display = 'inline-flex';
@@ -5947,6 +5964,218 @@ function swapNodeOrder(nodeId1, nodeId2) {
   
   // 显示提示
   showNotification(t('notifyNodeReordered') || '节点顺序已调整');
+}
+
+/**
+ * 重置节点排序顺序（添加到全局作用域）
+ */
+
+// ===== 配置热更新历史功能 =====
+
+/**
+ * 加载配置变更历史
+ */
+async function loadConfigHistory() {
+  try {
+    const response = await fetch('/api/config/history');
+    const result = await response.json();
+    
+    if (result.success) {
+      renderConfigHistory(result.data.history);
+      updateHotReloadStatus();
+    }
+  } catch (err) {
+    console.error('❌ 加载配置历史失败:', err);
+  }
+}
+
+/**
+ * 渲染配置历史列表
+ * @param {Array} history - 历史记录数组
+ */
+function renderConfigHistory(history) {
+  const container = document.getElementById('configHistoryList');
+  const historyCountEl = document.getElementById('historyCount');
+  
+  if (!container) return;
+  
+  if (historyCountEl) {
+    historyCountEl.textContent = history.length;
+  }
+  
+  if (!history || history.length === 0) {
+    container.innerHTML = `
+      <div class="history-empty-state">
+        <span class="empty-icon">📋</span>
+        <p>${t('noConfigHistory') || '暂无配置变更记录'}</p>
+        <small>${t('configChangesWillAppearHere') || '配置变更将在此显示'}</small>
+      </div>
+    `;
+    return;
+  }
+  
+  container.innerHTML = history.map(record => {
+    const date = new Date(record.timestamp);
+    const timeStr = date.toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+    
+    const typeLabel = getChangeTypeLabel(record.type);
+    const changesHtml = renderChanges(record.changes);
+    
+    return `
+      <div class="history-item">
+        <div class="history-item-header">
+          <span class="history-type ${record.type}">${typeLabel}</span>
+          <span class="history-timestamp">${timeStr}</span>
+        </div>
+        <div class="history-description">${escapeHtml(record.description)}</div>
+        ${changesHtml ? `<div class="history-changes">${changesHtml}</div>` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+/**
+ * 获取变更类型标签
+ * @param {string} type - 变更类型
+ * @returns {string} 类型标签
+ */
+function getChangeTypeLabel(type) {
+  const labels = {
+    'check_interval': '⏰ 检查间隔',
+    'settings': '⚙️ 配置设置',
+    'openclaw_reload': '🔄 OpenClaw 配置'
+  };
+  return labels[type] || type;
+}
+
+/**
+ * 渲染变更详情
+ * @param {Object} changes - 变更对象
+ * @returns {string} HTML 字符串
+ */
+function renderChanges(changes) {
+  if (!changes || Object.keys(changes).length === 0) return '';
+  
+  return Object.entries(changes).map(([key, value]) => {
+    if (typeof value === 'object' && value.old !== undefined && value.new !== undefined) {
+      const oldVal = formatChangeValue(value.old, key);
+      const newVal = formatChangeValue(value.new, key);
+      return `
+        <div class="change-item">
+          <span class="change-key">${escapeHtml(key)}</span>
+          <div class="change-values">
+            <span class="change-old">${oldVal}</span>
+            <span class="change-arrow">→</span>
+            <span class="change-new">${newVal}</span>
+          </div>
+        </div>
+      `;
+    }
+    return '';
+  }).join('');
+}
+
+/**
+ * 格式化变更值
+ * @param {*} value - 值
+ * @param {string} key - 键名
+ * @returns {string} 格式化后的值
+ */
+function formatChangeValue(value, key) {
+  if (key === 'checkInterval' || key === 'timeout') {
+    return `${value}ms (${(value / 1000).toFixed(1)}s)`;
+  }
+  if (typeof value === 'string') {
+    return `"${value}"`;
+  }
+  return String(value);
+}
+
+/**
+ * 更新热更新状态显示
+ */
+function updateHotReloadStatus() {
+  const lastUpdateEl = document.getElementById('lastConfigUpdate');
+  if (lastUpdateEl && configChangeHistory && configChangeHistory.length > 0) {
+    const lastRecord = configChangeHistory[0];
+    const date = new Date(lastRecord.timestamp);
+    lastUpdateEl.textContent = date.toLocaleString('zh-CN');
+  }
+}
+
+/**
+ * 清除配置历史
+ */
+async function clearConfigHistory() {
+  if (!confirm(t('confirmClearHistory') || '确定要清除所有配置变更历史吗？')) {
+    return;
+  }
+  
+  try {
+    const response = await fetch('/api/config/history/clear', { method: 'POST' });
+    const result = await response.json();
+    
+    if (result.success) {
+      showNotification(t('historyCleared') || '配置历史已清除', 'success');
+      loadConfigHistory();
+    } else {
+      showError(t('clearHistoryFailed') || '清除历史失败');
+    }
+  } catch (err) {
+    console.error('❌ 清除配置历史失败:', err);
+    showError(t('clearHistoryFailed') || '清除历史失败');
+  }
+}
+
+// 全局配置历史记录（用于 WebSocket 接收更新）
+let configChangeHistory = [];
+
+/**
+ * 处理配置变更 WebSocket 消息
+ * @param {Object} data - 配置变更数据
+ */
+function handleConfigChange(data) {
+  console.log('🔧 配置变更通知:', data);
+  
+  // 添加到本地历史
+  configChangeHistory.unshift(data);
+  if (configChangeHistory.length > MAX_CONFIG_HISTORY) {
+    configChangeHistory.pop();
+  }
+  
+  // 如果当前在历史标签页，刷新显示
+  if (currentTab === 'history') {
+    loadConfigHistory();
+  }
+  
+  // 更新状态
+  updateHotReloadStatus();
+  
+  // 显示通知
+  if (data.type === 'check_interval') {
+    showNotification(t('configHotReloaded') || '✅ 配置已热更新生效', 'success');
+  }
+}
+
+// 最大历史记录数
+const MAX_CONFIG_HISTORY = 50;
+
+/**
+ * HTML 转义
+ * @param {string} text - 文本
+ * @returns {string} 转义后的文本
+ */
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 }
 
 /**
