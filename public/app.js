@@ -43,8 +43,7 @@ const refreshBtn = document.getElementById('refreshBtn');
 const healthCheckBtn = document.getElementById('healthCheckBtn');
 const autoRefreshToggle = document.getElementById('autoRefresh');
 const refreshIntervalSelect = document.getElementById('refreshInterval');
-const themeToggle = document.getElementById('themeToggle');
-const themeIcon = document.getElementById('themeIcon');
+const themeSelect = document.getElementById('themeSelect');
 const lastUpdateEl = document.getElementById('lastUpdate');
 const totalNodesEl = document.getElementById('totalNodes');
 const onlineNodesEl = document.getElementById('onlineNodes');
@@ -452,11 +451,15 @@ function showLoadingOverlay() {
 }
 
 /**
- * 初始化主题（从 localStorage 读取或默认暗色模式）
+ * 初始化主题（从 localStorage 读取或默认赛博朋克）
  */
 function initTheme() {
-  const savedTheme = localStorage.getItem('theme') || 'dark';
+  const savedTheme = localStorage.getItem('theme') || 'cyberpunk';
   setTheme(savedTheme);
+  // 更新主题选择器的值
+  if (themeSelect) {
+    themeSelect.value = savedTheme;
+  }
   console.log('🎨 THEME INITIALIZED:', savedTheme);
 }
 
@@ -544,27 +547,23 @@ function playNodeStatusSound(isOnline) {
 
 /**
  * 设置主题
- * @param {string} theme - 'dark' 或 'light'
+ * @param {string} theme - 'cyberpunk', 'scifi', 'minimal', 或 'light'
  */
 function setTheme(theme) {
+  const validThemes = ['cyberpunk', 'scifi', 'minimal', 'light'];
+  if (!validThemes.includes(theme)) {
+    theme = 'cyberpunk'; // 默认主题
+  }
+  
   if (theme === 'light') {
     document.documentElement.setAttribute('data-theme', 'light');
-    themeIcon.textContent = '☀️';
-    localStorage.setItem('theme', 'light');
-  } else {
+  } else if (theme === 'cyberpunk') {
     document.documentElement.removeAttribute('data-theme');
-    themeIcon.textContent = '🌙';
-    localStorage.setItem('theme', 'dark');
+  } else {
+    document.documentElement.setAttribute('data-theme', theme);
   }
-}
-
-/**
- * 切换主题
- */
-function toggleTheme() {
-  const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
-  const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-  setTheme(newTheme);
+  
+  localStorage.setItem('theme', theme);
   
   // 更新粒子颜色
   updateParticleColors();
@@ -577,8 +576,15 @@ function toggleTheme() {
     drawConnections(filterNodes(currentNodes, searchQuery));
   }
   
-  showNotification(`THEME SWITCHED TO ${newTheme.toUpperCase()} MODE`);
-  console.log('🎨 THEME TOGGLED:', newTheme);
+  const themeNames = {
+    cyberpunk: '赛博朋克',
+    scifi: '科幻深空',
+    minimal: '极简现代',
+    light: '明亮简洁'
+  };
+  
+  showNotification(`THEME SWITCHED TO ${themeNames[theme] || theme.toUpperCase()}`);
+  console.log('🎨 THEME SET TO:', theme);
 }
 
 /**
@@ -1134,8 +1140,12 @@ function bindEvents() {
     });
   }
   
-  // 主题切换按钮
-  themeToggle.addEventListener('click', toggleTheme);
+  // 主题选择器
+  if (themeSelect) {
+    themeSelect.addEventListener('change', (e) => {
+      setTheme(e.target.value);
+    });
+  }
   
   // 音效开关
   if (soundToggle) {

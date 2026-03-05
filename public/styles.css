@@ -1,11 +1,11 @@
 /**
- * Node Monitor - 赛博朋克风格样式
- * 科幻感十足的视觉设计
+ * Node Monitor - 多主题支持
+ * 赛博朋克 / 科幻 / 极简 / 亮色
  * 
  * @author 牛开发 🐮💻
  */
 
-/* ===== 变量定义 - 暗色模式（默认） ===== */
+/* ===== 变量定义 - 赛博朋克主题（默认） ===== */
 :root {
   /* 核心配色 - 赛博朋克霓虹 */
   --bg-dark: #030014;
@@ -40,6 +40,78 @@
   --shadow-glow: 0 0 20px rgba(0, 245, 255, 0.3);
   --shadow-glow-strong: 0 0 40px rgba(0, 245, 255, 0.5);
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ===== 科幻主题 ===== */
+[data-theme="scifi"] {
+  /* 核心配色 - 深空科幻 */
+  --bg-dark: #000510;
+  --bg-primary: #001025;
+  --bg-secondary: #001a3d;
+  --bg-card: rgba(0, 26, 61, 0.85);
+  --bg-card-hover: rgba(0, 40, 80, 0.95);
+  
+  /* 霓虹色 - 蓝绿色调 */
+  --neon-cyan: #00d9ff;
+  --neon-blue: #0080ff;
+  --neon-purple: #6b4cff;
+  --neon-pink: #ff2a6d;
+  --neon-green: #05ffa1;
+  --neon-yellow: #ffea00;
+  
+  /* 状态色 */
+  --success: #05ffa1;
+  --warning: #ffea00;
+  --danger: #ff2a6d;
+  --info: #00d9ff;
+  
+  /* 文本 */
+  --text-primary: #e0f0ff;
+  --text-secondary: #8ab4f8;
+  --text-muted: #5c7c9a;
+  --text-glow: 0 0 12px rgba(0, 217, 255, 0.6);
+  
+  /* 效果 */
+  --border-radius: 6px;
+  --border-radius-lg: 16px;
+  --shadow-glow: 0 0 25px rgba(0, 217, 255, 0.35);
+  --shadow-glow-strong: 0 0 50px rgba(0, 217, 255, 0.6);
+}
+
+/* ===== 极简主题 ===== */
+[data-theme="minimal"] {
+  /* 核心配色 - 简洁现代 */
+  --bg-dark: #1a1a2e;
+  --bg-primary: #16213e;
+  --bg-secondary: #0f3460;
+  --bg-card: rgba(22, 33, 62, 0.7);
+  --bg-card-hover: rgba(22, 33, 62, 0.9);
+  
+  /* 霓虹色 - 柔和单色 */
+  --neon-cyan: #4cc9f0;
+  --neon-blue: #4361ee;
+  --neon-purple: #7209b7;
+  --neon-pink: #f72585;
+  --neon-green: #4cc9f0;
+  --neon-yellow: #fca311;
+  
+  /* 状态色 */
+  --success: #4cc9f0;
+  --warning: #fca311;
+  --danger: #f72585;
+  --info: #4361ee;
+  
+  /* 文本 */
+  --text-primary: #ffffff;
+  --text-secondary: #b8c1ec;
+  --text-muted: #8d99ae;
+  --text-glow: none;
+  
+  /* 效果 */
+  --border-radius: 8px;
+  --border-radius-lg: 20px;
+  --shadow-glow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  --shadow-glow-strong: 0 8px 40px rgba(0, 0, 0, 0.4);
 }
 
 /* ===== 亮色模式变量 ===== */
@@ -1048,6 +1120,63 @@ body::after {
   background: rgba(0, 139, 163, 0.1);
   border-color: var(--neon-cyan);
   box-shadow: 0 4px 20px rgba(0, 139, 163, 0.2);
+}
+
+/* 主题选择器 */
+.theme-select {
+  background: rgba(18, 18, 42, 0.7);
+  border: 1px solid rgba(0, 245, 255, 0.3);
+  border-radius: var(--border-radius);
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: var(--transition);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  font-family: inherit;
+  box-shadow: 0 0 15px rgba(0, 245, 255, 0.2);
+  outline: none;
+  min-width: 140px;
+}
+
+.theme-select:hover {
+  background: rgba(0, 245, 255, 0.15);
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 25px rgba(0, 245, 255, 0.4);
+}
+
+.theme-select:focus {
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 30px rgba(0, 245, 255, 0.5);
+}
+
+.theme-select option {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  padding: 8px;
+}
+
+/* 亮色模式下的主题选择器 */
+[data-theme="light"] .theme-select {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(0, 139, 163, 0.3);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  color: var(--text-primary);
+}
+
+[data-theme="light"] .theme-select:hover {
+  background: rgba(0, 139, 163, 0.1);
+  border-color: var(--neon-cyan);
+  box-shadow: 0 4px 20px rgba(0, 139, 163, 0.2);
+}
+
+[data-theme="light"] .theme-select:focus {
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 20px rgba(0, 139, 163, 0.3);
+}
+
+[data-theme="light"] .theme-select option {
+  background: var(--bg-primary);
+  color: var(--text-primary);
 }
 
 /* 音效开关 */
