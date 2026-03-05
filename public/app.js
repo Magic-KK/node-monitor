@@ -402,6 +402,9 @@ async function init() {
   updateLoadingProgress(100, 'SYSTEM ONLINE');
   setTimeout(() => hideLoadingOverlay(), 500);
   
+  // 初始化快速操作
+  initQuickActions();
+  
   console.log('✅ SYSTEM ONLINE');
 }
 
@@ -3706,6 +3709,326 @@ function showAlertsHistoryMessage(message, type = 'info') {
   setTimeout(() => {
     messageBox.style.display = 'none';
   }, 3000);
+}
+
+// ===== 快速操作功能 =====
+
+/**
+ * 显示快速操作消息
+ */
+function showQuickActionsMessage(message, type = 'info') {
+  const messageBox = document.getElementById('quickActionsMessage');
+  if (!messageBox) return;
+  
+  messageBox.textContent = message;
+  messageBox.className = `message-box message-${type}`;
+  messageBox.style.display = 'block';
+  
+  setTimeout(() => {
+    messageBox.style.display = 'none';
+  }, 4000);
+}
+
+/**
+ * 显示操作确认对话框
+ */
+function showActionConfirm(action, title, message, onConfirm) {
+  const overlay = document.createElement('div');
+  overlay.className = 'action-confirm-overlay';
+  overlay.innerHTML = `
+    <div class="action-confirm-dialog">
+      <h3>${title}</h3>
+      <p>${message}</p>
+      <div class="action-confirm-buttons">
+        <button class="btn btn-secondary" id="confirmCancelBtn">
+          <span class="btn-icon">✕</span>
+          取消
+        </button>
+        <button class="btn btn-danger" id="confirmOkBtn">
+          <span class="btn-icon">✓</span>
+          确认
+        </button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(overlay);
+  
+  // 播放确认音效
+  playSound('error');
+  
+  // 取消按钮
+  document.getElementById('confirmCancelBtn').addEventListener('click', () => {
+    overlay.remove();
+  });
+  
+  // 确认按钮
+  document.getElementById('confirmOkBtn').addEventListener('click', () => {
+    overlay.remove();
+    onConfirm();
+  });
+  
+  // ESC 键取消
+  const escHandler = (e) => {
+    if (e.key === 'Escape') {
+      overlay.remove();
+      document.removeEventListener('keydown', escHandler);
+    }
+  };
+  document.addEventListener('keydown', escHandler);
+}
+
+/**
+ * 重启服务
+ */
+async function restartService() {
+  showActionConfirm(
+    'restart',
+    '🔄 确认重启服务？',
+    '服务将中断约 3 秒钟，所有连接将会断开。确定要继续吗？',
+    async () => {
+      try {
+        showQuickActionsMessage('正在发送重启指令...', 'info');
+        
+        const response = await fetch('/api/actions/restart', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+          showQuickActionsMessage('✅ 重启指令已发送，服务将在 3 秒后重启', 'success');
+          playSound('success');
+          
+          // 关闭弹窗
+          closeQuickActionsModal();
+          
+          // 显示重启倒计时
+          let countdown = 3;
+          const countdownInterval = setInterval(() => {
+            countdown--;
+            if (countdown > 0) {
+              showQuickActionsMessage(`⏳ 服务重启中... ${countdown}秒`, 'info');
+            } else {
+              clearInterval(countdownInterval);
+            }
+          }, 1000);
+          
+          // 5 秒后尝试重新连接
+          setTimeout(() => {
+            showQuickActionsMessage('🔄 尝试重新连接...', 'info');
+            // 刷新页面
+            window.location.reload();
+          }, 5000);
+        } else {
+          showQuickActionsMessage(result.error || '重启失败', 'error');
+          playSound('error');
+        }
+      } catch (err) {
+        console.error('❌ 重启服务失败:', err);
+        showQuickActionsMessage('重启失败：' + err.message, 'error');
+        playSound('error');
+      }
+    }
+  );
+}
+
+/**
+ * 清理缓存
+ */
+async function clearCache() {
+  showActionConfirm(
+    'clear_cache',
+    '🗑️ 确认清理缓存？',
+    '将清除节点状态缓存、系统指标缓存和日志缓冲区。此操作不会影响配置数据。',
+    async () => {
+      try {
+        showQuickActionsMessage('正在清理缓存...', 'info');
+        
+        const response = await fetch('/api/actions/clear-cache', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+          const items = result.clearedItems ? result.clearedItems.join(', ') : '缓存';
+          showQuickActionsMessage(`✅ 已清理：${items}`, 'success');
+          playSound('success');
+          
+          // 关闭弹窗
+          closeQuickActionsModal();
+          
+          // 刷新状态显示
+          setTimeout(() => {
+            fetchNodes();
+            fetchSystemMetrics();
+          }, 500);
+        } else {
+          showQuickActionsMessage(result.error || '清理失败', 'error');
+          playSound('error');
+        }
+      } catch (err) {
+        console.error('❌ 清理缓存失败:', err);
+        showQuickActionsMessage('清理失败：' + err.message, 'error');
+        playSound('error');
+      }
+    }
+  );
+}
+
+/**
+ * 强制刷新所有节点
+ */
+async function refreshAllNodes() {
+  showQuickActionsMessage('⏱️ 正在执行健康检查...', 'info');
+  
+  try {
+    const response = await fetch('/api/health-check', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    const result = await response.json();
+    
+    if (result.success) {
+      showQuickActionsMessage(`✅ 健康检查完成：${result.onlineCount || 0}/${result.totalCount || 0} 节点在线`, 'success');
+      playSound('success');
+      
+      // 关闭弹窗
+      closeQuickActionsModal();
+      
+      // 刷新状态显示
+      setTimeout(() => {
+        fetchNodes();
+        fetchSystemMetrics();
+        updateStats();
+      }, 500);
+    } else {
+      showQuickActionsMessage(result.error || '刷新失败', 'error');
+      playSound('error');
+    }
+  } catch (err) {
+    console.error('❌ 强制刷新失败:', err);
+    showQuickActionsMessage('刷新失败：' + err.message, 'error');
+    playSound('error');
+  }
+}
+
+/**
+ * 重置配置
+ */
+async function resetConfig() {
+  showActionConfirm(
+    'reset_config',
+    '🔧 确认重置配置？',
+    '⚠️ 警告：此操作将清除所有自定义设置（主题、刷新间隔、音效、收藏等），且不可恢复！\n\n确定要继续吗？',
+    () => {
+      try {
+        // 清除 localStorage 中的配置
+        const keysToRemove = [
+          'nodeMonitor_theme',
+          'nodeMonitor_refreshInterval',
+          'nodeMonitor_soundEnabled',
+          'nodeMonitor_favorites',
+          'nodeMonitor_autoRefresh',
+          'nodeMonitor_selectedGroup'
+        ];
+        
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+        
+        showQuickActionsMessage('✅ 配置已重置，页面将刷新', 'success');
+        playSound('success');
+        
+        // 关闭弹窗
+        closeQuickActionsModal();
+        
+        // 1 秒后刷新页面
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } catch (err) {
+        console.error('❌ 重置配置失败:', err);
+        showQuickActionsMessage('重置失败：' + err.message, 'error');
+        playSound('error');
+      }
+    }
+  );
+}
+
+/**
+ * 关闭快速操作弹窗
+ */
+function closeQuickActionsModal() {
+  const modal = document.getElementById('quickActionsModal');
+  if (modal) {
+    modal.classList.remove('modal-active');
+    modal.style.display = 'none';
+  }
+}
+
+/**
+ * 初始化快速操作事件监听
+ */
+function initQuickActions() {
+  // 快速操作按钮
+  const quickActionsBtn = document.getElementById('quickActionsBtn');
+  if (quickActionsBtn) {
+    quickActionsBtn.addEventListener('click', () => {
+      const modal = document.getElementById('quickActionsModal');
+      if (modal) {
+        modal.style.display = 'flex';
+        setTimeout(() => modal.classList.add('modal-active'), 10);
+        playSound('success');
+      }
+    });
+  }
+  
+  // 关闭按钮
+  const closeBtn = document.getElementById('closeQuickActionsModal');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', closeQuickActionsModal);
+  }
+  
+  // 点击弹窗外部关闭
+  const modal = document.getElementById('quickActionsModal');
+  if (modal) {
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        closeQuickActionsModal();
+      }
+    });
+  }
+  
+  // 各个操作卡片
+  const restartAction = document.getElementById('restartAction');
+  if (restartAction) {
+    restartAction.addEventListener('click', restartService);
+  }
+  
+  const clearCacheAction = document.getElementById('clearCacheAction');
+  if (clearCacheAction) {
+    clearCacheAction.addEventListener('click', clearCache);
+  }
+  
+  const refreshAllAction = document.getElementById('refreshAllAction');
+  if (refreshAllAction) {
+    refreshAllAction.addEventListener('click', refreshAllNodes);
+  }
+  
+  const resetConfigAction = document.getElementById('resetConfigAction');
+  if (resetConfigAction) {
+    resetConfigAction.addEventListener('click', resetConfig);
+  }
+  
+  // ESC 键关闭弹窗
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const modal = document.getElementById('quickActionsModal');
+      if (modal && modal.style.display === 'flex') {
+        closeQuickActionsModal();
+      }
+    }
+  });
 }
 
 // 页面加载完成后初始化

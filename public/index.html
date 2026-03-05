@@ -166,6 +166,10 @@
         <span class="btn-icon">⚙️</span>
         配置管理
       </button>
+      <button id="quickActionsBtn" class="btn btn-orange">
+        <span class="btn-icon">⚡</span>
+        快速操作
+      </button>
       <div class="auto-refresh">
         <label class="toggle">
           <input type="checkbox" id="autoRefresh" checked>
@@ -607,6 +611,53 @@
           <span class="btn-icon">✕</span>
           取消
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 快速操作弹窗 -->
+  <div id="quickActionsModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>⚡ 快速操作</h2>
+        <button id="closeQuickActionsModal" class="modal-close" title="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="quick-actions-grid">
+          <!-- 重启服务 -->
+          <div class="quick-action-card" id="restartAction">
+            <div class="action-icon">🔄</div>
+            <div class="action-title">重启服务</div>
+            <div class="action-desc">重新启动监控服务</div>
+            <div class="action-warning">⚠️ 服务将中断 3 秒</div>
+          </div>
+          
+          <!-- 清理缓存 -->
+          <div class="quick-action-card" id="clearCacheAction">
+            <div class="action-icon">🗑️</div>
+            <div class="action-title">清理缓存</div>
+            <div class="action-desc">清除节点状态和日志缓存</div>
+            <div class="action-warning">✅ 安全操作</div>
+          </div>
+          
+          <!-- 刷新所有节点 -->
+          <div class="quick-action-card" id="refreshAllAction">
+            <div class="action-icon">🔁</div>
+            <div class="action-title">强制刷新</div>
+            <div class="action-desc">立即执行健康检查</div>
+            <div class="action-warning">⏱️ 可能需要几秒</div>
+          </div>
+          
+          <!-- 重置配置 -->
+          <div class="quick-action-card" id="resetConfigAction">
+            <div class="action-icon">🔧</div>
+            <div class="action-title">重置配置</div>
+            <div class="action-desc">恢复默认设置</div>
+            <div class="action-warning">⚠️ 不可撤销</div>
+          </div>
+        </div>
+        
+        <div id="quickActionsMessage" class="message-box" style="display: none; margin-top: 20px;"></div>
       </div>
     </div>
   </div>

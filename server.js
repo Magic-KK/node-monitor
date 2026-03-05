@@ -1840,6 +1840,120 @@ function formatUptime(seconds) {
 }
 
 /**
+ * ===== 快速操作 API =====
+ * 提供一键重启、清理缓存等快捷操作
+ */
+
+/**
+ * 重启服务
+ * 注意：由于 Node.js 进程无法自我重启，此 API 会返回信号给客户端
+ * 实际重启由客户端或外部脚本执行
+ */
+app.post('/api/actions/restart', (req, res) => {
+  try {
+    addLog(LOG_LEVELS.INFO, '收到服务重启请求', 'API');
+    
+    // 广播重启通知给所有 WebSocket 客户端
+    broadcast({
+      type: 'system_action',
+      action: 'restart',
+      message: '服务即将重启，请稍候...',
+      timestamp: new Date().toISOString()
+    });
+    
+    addLog(LOG_LEVELS.SUCCESS, '重启通知已广播', 'API');
+    
+    res.json({
+      success: true,
+      message: '重启指令已发送，服务将在 3 秒后重启',
+      action: 'restart',
+      delay: 3000
+    });
+    
+    // 3 秒后退出进程（由外部监控脚本自动重启）
+    setTimeout(() => {
+      console.log('🔄 服务正在重启...');
+      process.exit(0);
+    }, 3000);
+    
+  } catch (err) {
+    console.error('❌ 重启服务失败:', err.message);
+    addLog(LOG_LEVELS.ERROR, '重启服务失败：' + err.message, 'API');
+    res.status(500).json({
+      success: false,
+      error: '重启服务失败：' + err.message
+    });
+  }
+});
+
+/**
+ * 清理缓存
+ * 清理节点状态缓存、历史数据缓存等
+ */
+app.post('/api/actions/clear-cache', (req, res) => {
+  try {
+    const clearedItems = [];
+    
+    // 清理节点状态缓存
+    const nodeCount = nodeStatusCache.size;
+    nodeStatusCache.clear();
+    if (nodeCount > 0) {
+      clearedItems.push(`节点状态缓存 (${nodeCount} 个)`);
+    }
+    
+    // 清理系统指标缓存
+    systemMetricsCache = {
+      cpuUsage: 0,
+      memoryUsage: 0,
+      memoryTotal: os.totalmem(),
+      memoryFree: os.freemem(),
+      platform: os.platform(),
+      uptime: os.uptime(),
+      nodeVersion: process.version
+    };
+    clearedItems.push('系统指标缓存');
+    
+    // 清理日志缓冲区
+    const logCount = logBuffer.length;
+    logBuffer.length = 0;
+    if (logCount > 0) {
+      clearedItems.push(`日志缓冲区 (${logCount} 条)`);
+    }
+    
+    addLog(LOG_LEVELS.SUCCESS, `缓存已清理：${clearedItems.join(', ')}`, 'API');
+    
+    // 广播缓存清理通知
+    broadcast({
+      type: 'system_action',
+      action: 'clear_cache',
+      message: '缓存已清理',
+      details: clearedItems,
+      timestamp: new Date().toISOString()
+    });
+    
+    // 立即刷新节点状态
+    checkAllNodes().then(statuses => {
+      broadcastStatusUpdate(statuses);
+      saveHistorySnapshot(statuses);
+    });
+    
+    res.json({
+      success: true,
+      message: '缓存已清理',
+      clearedItems: clearedItems
+    });
+    
+  } catch (err) {
+    console.error('❌ 清理缓存失败:', err.message);
+    addLog(LOG_LEVELS.ERROR, '清理缓存失败：' + err.message, 'API');
+    res.status(500).json({
+      success: false,
+      error: '清理缓存失败：' + err.message
+    });
+  }
+});
+
+/**
  * 首页
  */
 app.get('/', (req, res) => {
