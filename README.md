@@ -12,9 +12,11 @@
 
 Node Monitor 是一个专为 J.A.R.V.I.S. 专才团队设计的节点状态监控服务，提供：
 
+- ✅ **真实状态检测** - 从 `openclaw.json` 读取真实配置，非模拟数据
 - ✅ **团队配置展示** - 清晰展示所有成员信息和职责
-- ✅ **实时状态监控** - 在线/离线状态实时轮询（30 秒间隔）
-- ✅ **健康检查** - 手动/自动检测节点可用性
+- ✅ **实时状态监控** - 在线/离线/未配置状态实时轮询（30 秒间隔）
+- ✅ **健康检查** - 手动/自动检测节点可用性（检查 agent 目录）
+- ✅ **配置状态识别** - 自动识别已配置/未配置的节点（根据 appId 有效性）
 - ✅ **美观界面** - 现代深色主题，响应式设计
 - ✅ **API 支持** - RESTful API 方便集成
 
@@ -69,9 +71,29 @@ node-monitor/
 
 ## ⚙️ 配置说明
 
+### 配置源
+
+**Node Monitor 从 `openclaw.json` 自动读取真实的 agent 配置**，包括：
+
+- agent 列表（`agents.list`）
+- 飞书频道配置（`channels.feishu.accounts`）
+- agent 绑定关系（`bindings`）
+
+**状态判断逻辑：**
+
+| 状态 | 条件 |
+|------|------|
+| 🟢 在线 | 已配置 + agent 目录存在 |
+| 🔴 离线 | 已配置 + agent 目录不存在 |
+| ⚠️ 未配置 | appId 无效或缺失 |
+
 ### team-config.json
 
-编辑 `config/team-config.json` 自定义你的团队配置：
+`config/team-config.json` 作为备用配置，包含：
+
+- 团队名称
+- 节点描述信息（emoji、role、description）
+- 健康检查间隔设置
 
 ```json
 {
@@ -130,12 +152,21 @@ node-monitor/
   "success": true,
   "data": {
     "nodes": [...],
-    "totalNodes": 4,
-    "onlineCount": 3,
-    "lastUpdate": "2026-03-05T03:00:00.000Z"
+    "totalNodes": 5,
+    "onlineCount": 2,
+    "configuredCount": 2,
+    "lastUpdate": "2026-03-05T03:00:00.000Z",
+    "source": "openclaw.json"
   }
 }
 ```
+
+**字段说明：**
+
+- `totalNodes` - 总 agent 数量
+- `onlineCount` - 在线数量
+- `configuredCount` - 已配置数量（有有效 appId）
+- `source` - 配置来源
 
 ### POST /api/health-check
 
@@ -278,6 +309,13 @@ curl -X POST http://localhost:3000/api/health-check
 ---
 
 ## 📝 更新日志
+
+### v1.1.0 (2026-03-05)
+- 🔧 **修复**：从 openclaw.json 读取真实配置，不再使用模拟数据
+- ✨ **新增**：配置状态识别（已配置/未配置）
+- ✨ **新增**：agent 目录存在性检测
+- ✨ **新增**：配置重载 API (`/api/reload-config`)
+- 📝 **文档**：更新配置说明和 API 文档
 
 ### v1.0.0 (2026-03-05)
 - ✨ 初始版本发布
