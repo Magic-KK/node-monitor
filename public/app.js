@@ -50,6 +50,17 @@ const offlineNodesEl = document.getElementById('offlineNodes');
 const searchInput = document.getElementById('searchInput');
 const clearSearchBtn = document.getElementById('clearSearchBtn');
 
+// 弹窗元素
+const nodeModal = document.getElementById('nodeModal');
+const modalTitle = document.getElementById('modalTitle');
+const modalBody = document.getElementById('modalBody');
+const closeModal = document.getElementById('closeModal');
+const pingNodeBtn = document.getElementById('pingNodeBtn');
+const copyInfoBtn = document.getElementById('copyInfoBtn');
+
+// 当前选中的节点
+let selectedNode = null;
+
 /**
  * 初始化应用
  */
@@ -318,7 +329,7 @@ function createNodeCard(node) {
   }
   
   return `
-    <div class="node-card ${statusClass}">
+    <div class="node-card ${statusClass}" data-node-id="${node.id}" style="cursor: pointer;">
       <div class="node-header">
         <span class="node-emoji">${node.emoji || '📡'}</span>
         <div class="node-info">
@@ -492,6 +503,49 @@ function bindEvents() {
   if (clearSearchBtn) {
     clearSearchBtn.addEventListener('click', clearSearch);
   }
+  
+  // 节点卡片点击事件（事件委托）
+  nodesGrid.addEventListener('click', (e) => {
+    const card = e.target.closest('.node-card');
+    if (card) {
+      const nodeId = card.getAttribute('data-node-id');
+      const node = currentNodes.find(n => n.id === nodeId);
+      if (node) {
+        openNodeModal(node);
+      }
+    }
+  });
+  
+  // 弹窗关闭按钮
+  if (closeModal) {
+    closeModal.addEventListener('click', closeNodeModal);
+  }
+  
+  // 点击弹窗背景关闭
+  if (nodeModal) {
+    nodeModal.addEventListener('click', (e) => {
+      if (e.target === nodeModal) {
+        closeNodeModal();
+      }
+    });
+  }
+  
+  // PING NODE 按钮
+  if (pingNodeBtn) {
+    pingNodeBtn.addEventListener('click', pingSelectedNode);
+  }
+  
+  // COPY INFO 按钮
+  if (copyInfoBtn) {
+    copyInfoBtn.addEventListener('click', copyNodeInfo);
+  }
+  
+  // ESC 键关闭弹窗
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && nodeModal && nodeModal.classList.contains('active')) {
+      closeNodeModal();
+    }
+  });
   
   // 页面可见性变化时暂停/恢复刷新
   document.addEventListener('visibilitychange', () => {
@@ -739,6 +793,197 @@ function updateParticleColors() {
   particles.forEach((particle, index) => {
     particle.color = colors[index % colors.length];
   });
+}
+
+// ===== 节点详情弹窗功能 =====
+
+/**
+ * 打开节点详情弹窗
+ * @param {Object} node - 节点数据
+ */
+function openNodeModal(node) {
+  selectedNode = node;
+  
+  // 确定状态
+  let statusClass = 'status-offline';
+  let statusText = 'OFFLINE';
+  
+  if (!node.configured) {
+    statusClass = 'status-unconfigured';
+    statusText = 'NOT CONFIGURED';
+  } else if (node.online) {
+    statusClass = 'status-online';
+    statusText = 'ONLINE';
+  }
+  
+  // 生成详情内容
+  modalTitle.textContent = 'NODE DETAILS';
+  modalBody.innerHTML = `
+    <div style="text-align: center; margin-bottom: 20px;">
+      <span class="node-emoji-large">${node.emoji || '📡'}</span>
+    </div>
+    
+    <div class="status-indicator-large ${statusClass}">
+      <span class="status-dot-large"></span>
+      ${statusText}
+    </div>
+    
+    <div class="detail-section">
+      <div class="detail-section-title">BASIC INFO</div>
+      <div class="detail-grid">
+        <div class="detail-item">
+          <div class="detail-item-label">NAME</div>
+          <div class="detail-item-value">${node.name}</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-item-label">ROLE</div>
+          <div class="detail-item-value">${node.role || 'N/A'}</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-item-label">WORKSPACE</div>
+          <div class="detail-item-value">${node.workspace || 'N/A'}</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-item-label">NODE ID</div>
+          <div class="detail-item-value" style="font-family: monospace; font-size: 0.9rem;">${node.id}</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="detail-section">
+      <div class="detail-section-title">DESCRIPTION</div>
+      <div class="detail-item" style="background: transparent; border: none; padding: 0;">
+        <div class="detail-item-value" style="font-size: 1rem; line-height: 1.8;">
+          ${node.description || 'No description available'}
+        </div>
+      </div>
+    </div>
+    
+    ${node.configured ? `
+    <div class="detail-section">
+      <div class="detail-section-title">STATUS INFO</div>
+      <div class="detail-grid">
+        <div class="detail-item">
+          <div class="detail-item-label">RESPONSE TIME</div>
+          <div class="detail-item-value" style="color: var(--success);">
+            ${node.responseTime ? node.responseTime + 'ms' : 'N/A'}
+          </div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-item-label">LAST CHECK</div>
+          <div class="detail-item-value">${formatTime(node.lastCheck)}</div>
+        </div>
+        ${node.url ? `
+        <div class="detail-item" style="grid-column: 1 / -1;">
+          <div class="detail-item-label">ENDPOINT URL</div>
+          <div class="detail-item-value" style="font-family: monospace; font-size: 0.9rem; color: var(--neon-cyan);">
+            ${node.url}
+          </div>
+        </div>
+        ` : ''}
+        ${node.error ? `
+        <div class="detail-item" style="grid-column: 1 / -1;">
+          <div class="detail-item-label">LAST ERROR</div>
+          <div class="detail-item-value" style="color: var(--danger);">
+            ${node.error}
+          </div>
+        </div>
+        ` : ''}
+      </div>
+    </div>
+    ` : `
+    <div class="detail-section">
+      <div class="detail-section-title">⚠️ CONFIGURATION WARNING</div>
+      <div class="detail-item" style="background: rgba(252, 238, 10, 0.1); border-color: var(--warning);">
+        <div class="detail-item-value" style="color: var(--warning);">
+          This node is not configured yet. Please add the APP_ID to enable monitoring.
+        </div>
+      </div>
+    </div>
+    `}
+  `;
+  
+  // 显示弹窗
+  nodeModal.classList.add('active');
+  document.body.style.overflow = 'hidden'; // 防止背景滚动
+  
+  console.log('📋 NODE MODAL OPENED:', node.name);
+}
+
+/**
+ * 关闭节点详情弹窗
+ */
+function closeNodeModal() {
+  nodeModal.classList.remove('active');
+  document.body.style.overflow = ''; // 恢复滚动
+  selectedNode = null;
+  
+  console.log('📋 NODE MODAL CLOSED');
+}
+
+/**
+ * PING 选中的节点
+ */
+async function pingSelectedNode() {
+  if (!selectedNode || !selectedNode.url) {
+    showNotification('NO ENDPOINT URL AVAILABLE');
+    return;
+  }
+  
+  pingNodeBtn.disabled = true;
+  pingNodeBtn.innerHTML = '<span class="btn-icon">⏳</span> PINGING...';
+  
+  try {
+    const startTime = Date.now();
+    const response = await fetch(selectedNode.url, { 
+      method: 'HEAD',
+      timeout: 5000
+    });
+    const endTime = Date.now();
+    const responseTime = endTime - startTime;
+    
+    if (response.ok) {
+      showNotification(`PING SUCCESS: ${responseTime}ms`);
+      // 更新弹窗中的响应时间
+      const responseTimeEl = modalBody.querySelector('.detail-item-value');
+      if (responseTimeEl) {
+        responseTimeEl.textContent = responseTime + 'ms';
+      }
+    } else {
+      showNotification(`PING FAILED: ${response.status}`);
+    }
+  } catch (err) {
+    console.error('⚠️ PING FAILED:', err);
+    showNotification('PING FAILED: CONNECTION ERROR');
+  } finally {
+    pingNodeBtn.disabled = false;
+    pingNodeBtn.innerHTML = '<span class="btn-icon">📡</span> PING NODE';
+  }
+}
+
+/**
+ * 复制节点信息到剪贴板
+ */
+async function copyNodeInfo() {
+  if (!selectedNode) return;
+  
+  const info = `
+NODE: ${selectedNode.name}
+ROLE: ${selectedNode.role || 'N/A'}
+STATUS: ${selectedNode.configured ? (selectedNode.online ? 'ONLINE' : 'OFFLINE') : 'NOT CONFIGURED'}
+WORKSPACE: ${selectedNode.workspace || 'N/A'}
+${selectedNode.url ? 'URL: ' + selectedNode.url : ''}
+${selectedNode.responseTime ? 'RESPONSE TIME: ' + selectedNode.responseTime + 'ms' : ''}
+${selectedNode.description ? 'DESCRIPTION: ' + selectedNode.description : ''}
+  `.trim();
+  
+  try {
+    await navigator.clipboard.writeText(info);
+    showNotification('NODE INFO COPIED TO CLIPBOARD');
+  } catch (err) {
+    console.error('⚠️ COPY FAILED:', err);
+    showError('FAILED TO COPY TO CLIPBOARD');
+  }
 }
 
 // 页面加载完成后初始化

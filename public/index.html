@@ -99,6 +99,29 @@
     </footer>
   </div>
 
+  <!-- 节点详情弹窗 -->
+  <div id="nodeModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modalTitle">NODE DETAILS</h2>
+        <button id="closeModal" class="modal-close" title="Close">✕</button>
+      </div>
+      <div class="modal-body" id="modalBody">
+        <!-- 详情内容动态生成 -->
+      </div>
+      <div class="modal-footer">
+        <button id="pingNodeBtn" class="btn btn-primary">
+          <span class="btn-icon">📡</span>
+          PING NODE
+        </button>
+        <button id="copyInfoBtn" class="btn btn-success">
+          <span class="btn-icon">📋</span>
+          COPY INFO
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script src="app.js"></script>
 </body>
 </html>
