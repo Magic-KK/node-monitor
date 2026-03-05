@@ -711,6 +711,12 @@ function bindEvents() {
     exportBtn.addEventListener('click', exportToCSV);
   }
   
+  // 历史趋势按钮
+  const historyBtn = document.getElementById('historyBtn');
+  if (historyBtn) {
+    historyBtn.addEventListener('click', openHistoryModal);
+  }
+  
   // 自动刷新开关
   autoRefreshToggle.addEventListener('change', () => {
     if (autoRefreshToggle.checked) {
@@ -829,6 +835,22 @@ function bindEvents() {
   const settingsBtn = document.getElementById('settingsBtn');
   if (settingsBtn) {
     settingsBtn.addEventListener('click', openSettingsModal);
+  }
+  
+  // ===== 历史趋势相关事件 =====
+  
+  // 关闭历史弹窗按钮
+  const closeHistoryModal = document.getElementById('closeHistoryModal');
+  if (closeHistoryModal) {
+    closeHistoryModal.addEventListener('click', closeHistoryModalFunc);
+  }
+  
+  // 历史天数选择器
+  const historyDaysSelect = document.getElementById('historyDaysSelect');
+  if (historyDaysSelect) {
+    historyDaysSelect.addEventListener('change', () => {
+      loadHistoryStats(parseInt(historyDaysSelect.value));
+    });
   }
   
   // 关闭配置弹窗按钮

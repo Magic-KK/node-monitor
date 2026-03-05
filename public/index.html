@@ -112,6 +112,10 @@
         <span class="btn-icon">📊</span>
         导出报告
       </button>
+      <button id="historyBtn" class="btn btn-purple">
+        <span class="btn-icon">📈</span>
+        历史趋势
+      </button>
       <button id="settingsBtn" class="btn btn-info">
         <span class="btn-icon">⚙️</span>
         配置管理
@@ -200,6 +204,62 @@
           <span class="btn-icon">📋</span>
           COPY INFO
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 历史趋势弹窗 -->
+  <div id="historyModal" class="modal">
+    <div class="modal-content modal-content-large">
+      <div class="modal-header">
+        <h2>📈 历史趋势分析</h2>
+        <button id="closeHistoryModal" class="modal-close" title="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <!-- 统计概览 -->
+        <div class="history-summary" id="historySummary">
+          <div class="loading">
+            <div class="spinner"></div>
+            <p>加载历史数据...</p>
+          </div>
+        </div>
+
+        <!-- 历史图表 -->
+        <div class="history-chart-container">
+          <div class="chart-header">
+            <span class="chart-icon">📊</span>
+            <span class="chart-title">节点在线率趋势</span>
+            <select id="historyDaysSelect" class="form-select">
+              <option value="1">最近 1 天</option>
+              <option value="3">最近 3 天</option>
+              <option value="7" selected>最近 7 天</option>
+              <option value="14">最近 14 天</option>
+              <option value="30">最近 30 天</option>
+            </select>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="historyChart"></canvas>
+          </div>
+        </div>
+
+        <!-- 历史记录表格 -->
+        <div class="history-table-container">
+          <h3>📋 最近状态变化</h3>
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>时间</th>
+                <th>节点</th>
+                <th>状态</th>
+                <th>响应时间</th>
+                <th>在线率</th>
+              </tr>
+            </thead>
+            <tbody id="historyTableBody">
+              <!-- 历史记录动态生成 -->
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>

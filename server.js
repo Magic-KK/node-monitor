@@ -155,6 +155,89 @@ function buildRealNodeList() {
 // 节点状态缓存（内存存储）
 const nodeStatusCache = new Map();
 
+// 历史数据存储路径
+const historyDir = path.join(__dirname, 'data', 'history');
+const historyFilePath = path.join(historyDir, 'node-history.json');
+
+// 初始化历史数据存储
+function initHistoryStorage() {
+  try {
+    // 创建数据目录
+    if (!fs.existsSync(historyDir)) {
+      fs.mkdirSync(historyDir, { recursive: true });
+      console.log('📁 创建历史数据目录:', historyDir);
+    }
+    
+    // 初始化历史文件
+    if (!fs.existsSync(historyFilePath)) {
+      const initialData = {
+        version: '1.0',
+        createdAt: new Date().toISOString(),
+        records: []
+      };
+      fs.writeFileSync(historyFilePath, JSON.stringify(initialData, null, 2));
+      console.log('📄 初始化历史数据文件:', historyFilePath);
+    }
+    
+    console.log('✅ 历史数据存储初始化完成');
+  } catch (err) {
+    console.warn('⚠️ 历史数据存储初始化失败:', err.message);
+  }
+}
+
+// 保存状态快照到历史记录
+function saveHistorySnapshot(statuses) {
+  try {
+    let historyData;
+    
+    // 读取现有历史数据
+    if (fs.existsSync(historyFilePath)) {
+      historyData = JSON.parse(fs.readFileSync(historyFilePath, 'utf8'));
+    } else {
+      historyData = {
+        version: '1.0',
+        createdAt: new Date().toISOString(),
+        records: []
+      };
+    }
+    
+    // 创建新的快照记录
+    const snapshot = {
+      timestamp: new Date().toISOString(),
+      nodes: statuses.map(s => ({
+        id: s.id,
+        name: s.name,
+        online: s.online,
+        configured: s.configured,
+        responseTime: s.responseTime,
+        error: s.error
+      })),
+      summary: {
+        totalNodes: statuses.length,
+        onlineCount: statuses.filter(s => s.online).length,
+        offlineCount: statuses.filter(s => !s.online).length,
+        configuredCount: statuses.filter(s => s.configured).length
+      }
+    };
+    
+    // 添加到记录数组开头（最新的在前）
+    historyData.records.unshift(snapshot);
+    
+    // 限制记录数量（保留最近 1000 条快照，约 16 小时的数据）
+    const MAX_RECORDS = 1000;
+    if (historyData.records.length > MAX_RECORDS) {
+      historyData.records = historyData.records.slice(0, MAX_RECORDS);
+    }
+    
+    // 写入文件
+    fs.writeFileSync(historyFilePath, JSON.stringify(historyData, null, 2));
+    
+    console.log(`📊 历史快照已保存（共 ${historyData.records.length} 条记录）`);
+  } catch (err) {
+    console.warn('⚠️ 保存历史快照失败:', err.message);
+  }
+}
+
 // 系统指标缓存（CPU/内存等）
 const systemMetricsCache = {
   cpu: 0,
@@ -534,6 +617,209 @@ app.get('/api/export/csv', async (req, res) => {
 });
 
 /**
+ * API: 获取历史状态记录
+ * GET /api/history
+ * 
+ * 查询参数：
+ * - limit: 返回记录数量（默认 50，最大 200）
+ * - nodeId: 筛选特定节点（可选）
+ * - startTime: 开始时间（ISO 格式，可选）
+ * - endTime: 结束时间（ISO 格式，可选）
+ */
+app.get('/api/history', (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+    const nodeId = req.query.nodeId;
+    const startTime = req.query.startTime;
+    const endTime = req.query.endTime;
+    
+    // 读取历史数据
+    if (!fs.existsSync(historyFilePath)) {
+      return res.json({
+        success: true,
+        data: {
+          records: [],
+          total: 0
+        }
+      });
+    }
+    
+    let historyData = JSON.parse(fs.readFileSync(historyFilePath, 'utf8'));
+    let records = historyData.records || [];
+    
+    // 按节点 ID 筛选
+    if (nodeId) {
+      records = records.map(record => {
+        const nodeStatus = record.nodes.find(n => n.id === nodeId);
+        if (nodeStatus) {
+          return {
+            timestamp: record.timestamp,
+            node: nodeStatus,
+            summary: record.summary
+          };
+        }
+        return null;
+      }).filter(r => r !== null);
+    }
+    
+    // 按时间范围筛选
+    if (startTime) {
+      records = records.filter(r => new Date(r.timestamp) >= new Date(startTime));
+    }
+    if (endTime) {
+      records = records.filter(r => new Date(r.timestamp) <= new Date(endTime));
+    }
+    
+    // 限制返回数量
+    const total = records.length;
+    records = records.slice(0, limit);
+    
+    res.json({
+      success: true,
+      data: {
+        records,
+        total,
+        limit,
+        historyFile: historyFilePath
+      }
+    });
+  } catch (err) {
+    console.error('❌ 获取历史记录失败:', err.message);
+    res.status(500).json({
+      success: false,
+      error: '获取历史记录失败：' + err.message
+    });
+  }
+});
+
+/**
+ * API: 获取节点历史趋势统计
+ * GET /api/history/stats
+ * 
+ * 返回节点在线率、平均响应时间等统计信息
+ */
+app.get('/api/history/stats', (req, res) => {
+  try {
+    const days = parseInt(req.query.days) || 7; // 默认统计最近 7 天
+    
+    if (!fs.existsSync(historyFilePath)) {
+      return res.json({
+        success: true,
+        data: {
+          period: `${days} days`,
+          nodes: []
+        }
+      });
+    }
+    
+    const historyData = JSON.parse(fs.readFileSync(historyFilePath, 'utf8'));
+    const records = historyData.records || [];
+    
+    // 计算时间范围
+    const now = new Date();
+    const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+    
+    const filteredRecords = records.filter(r => new Date(r.timestamp) >= startDate);
+    
+    // 按节点统计
+    const nodeStats = {};
+    
+    filteredRecords.forEach(record => {
+      record.nodes.forEach(node => {
+        if (!nodeStats[node.id]) {
+          nodeStats[node.id] = {
+            id: node.id,
+            name: node.name,
+            totalChecks: 0,
+            onlineCount: 0,
+            offlineCount: 0,
+            responseTimes: [],
+            uptime: 0,
+            avgResponseTime: 0
+          };
+        }
+        
+        const stats = nodeStats[node.id];
+        stats.totalChecks++;
+        
+        if (node.online) {
+          stats.onlineCount++;
+          if (node.responseTime !== null) {
+            stats.responseTimes.push(node.responseTime);
+          }
+        } else {
+          stats.offlineCount++;
+        }
+      });
+    });
+    
+    // 计算最终统计
+    const statsArray = Object.values(nodeStats).map(stats => {
+      const uptime = stats.totalChecks > 0 
+        ? Math.round((stats.onlineCount / stats.totalChecks) * 100 * 100) / 100
+        : 0;
+      
+      const avgResponseTime = stats.responseTimes.length > 0
+        ? Math.round(stats.responseTimes.reduce((a, b) => a + b, 0) / stats.responseTimes.length * 100) / 100
+        : 0;
+      
+      return {
+        ...stats,
+        uptime,
+        avgResponseTime,
+        responseTimes: undefined // 不返回原始数据
+      };
+    });
+    
+    res.json({
+      success: true,
+      data: {
+        period: `${days} days`,
+        totalRecords: filteredRecords.length,
+        nodes: statsArray
+      }
+    });
+  } catch (err) {
+    console.error('❌ 获取历史统计失败:', err.message);
+    res.status(500).json({
+      success: false,
+      error: '获取历史统计失败：' + err.message
+    });
+  }
+});
+
+/**
+ * API: 清除历史记录
+ * POST /api/history/clear
+ * 
+ * 清除所有历史记录（谨慎使用）
+ */
+app.post('/api/history/clear', (req, res) => {
+  try {
+    if (fs.existsSync(historyFilePath)) {
+      const initialData = {
+        version: '1.0',
+        createdAt: new Date().toISOString(),
+        records: []
+      };
+      fs.writeFileSync(historyFilePath, JSON.stringify(initialData, null, 2));
+      console.log('🗑️ 历史记录已清除');
+    }
+    
+    res.json({
+      success: true,
+      message: '历史记录已清除'
+    });
+  } catch (err) {
+    console.error('❌ 清除历史记录失败:', err.message);
+    res.status(500).json({
+      success: false,
+      error: '清除历史记录失败：' + err.message
+    });
+  }
+});
+
+/**
  * API: 获取配置设置
  * GET /api/settings
  */
@@ -790,6 +1076,8 @@ function startHealthCheckScheduler() {
     const onlineCount = statuses.filter(s => s.online).length;
     const configuredCount = statuses.filter(s => s.configured).length;
     console.log(`✅ 初始健康检查完成：${onlineCount}/${configuredCount} 节点在线（共 ${statuses.length} 个 agent）`);
+    // 保存初始快照
+    saveHistorySnapshot(statuses);
   });
   
   // 定时执行
@@ -798,6 +1086,8 @@ function startHealthCheckScheduler() {
       const onlineCount = statuses.filter(s => s.online).length;
       const configuredCount = statuses.filter(s => s.configured).length;
       console.log(`📊 健康检查：${onlineCount}/${configuredCount} 节点在线`);
+      // 保存历史快照
+      saveHistorySnapshot(statuses);
     });
   }, interval);
 }
@@ -814,6 +1104,9 @@ app.listen(PORT, () => {
   console.log(`║     📋 配置源：openclaw.json                            ║`);
   console.log('╚════════════════════════════════════════════════════════╝');
   console.log('');
+  
+  // 初始化历史数据存储
+  initHistoryStorage();
   
   // 启动健康检查调度器
   startHealthCheckScheduler();
