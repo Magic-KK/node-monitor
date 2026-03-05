@@ -9,6 +9,8 @@
 let config = null;
 let autoRefreshInterval = null;
 let isRefreshing = false;
+let currentNodes = []; // 缓存当前节点数据用于搜索过滤
+let searchQuery = ''; // 当前搜索关键词
 
 // DOM 元素
 const nodesGrid = document.getElementById('nodesGrid');
@@ -21,6 +23,8 @@ const lastUpdateEl = document.getElementById('lastUpdate');
 const totalNodesEl = document.getElementById('totalNodes');
 const onlineNodesEl = document.getElementById('onlineNodes');
 const offlineNodesEl = document.getElementById('offlineNodes');
+const searchInput = document.getElementById('searchInput');
+const clearSearchBtn = document.getElementById('clearSearchBtn');
 
 /**
  * 初始化应用
@@ -175,8 +179,83 @@ function renderNodes(nodes) {
     return;
   }
   
+  // 缓存当前节点数据
+  currentNodes = nodes;
+  
+  // 如果有搜索关键词，先过滤
+  const filteredNodes = filterNodes(nodes, searchQuery);
+  
   // 生成 HTML
-  nodesGrid.innerHTML = nodes.map(node => createNodeCard(node)).join('');
+  if (filteredNodes.length === 0) {
+    nodesGrid.innerHTML = `
+      <div class="no-results">
+        <div class="no-results-icon">🔍</div>
+        <div class="no-results-title">NO NODES FOUND</div>
+        <div class="no-results-text">Try adjusting your search query</div>
+      </div>
+    `;
+  } else {
+    nodesGrid.innerHTML = filteredNodes.map(node => createNodeCard(node)).join('');
+  }
+  
+  // 更新搜索按钮状态
+  updateClearSearchButton();
+}
+
+/**
+ * 过滤节点（根据搜索关键词）
+ * @param {Array} nodes - 节点数组
+ * @param {string} query - 搜索关键词
+ * @returns {Array} 过滤后的节点数组
+ */
+function filterNodes(nodes, query) {
+  if (!query || query.trim() === '') {
+    return nodes;
+  }
+  
+  const searchLower = query.toLowerCase().trim();
+  
+  return nodes.filter(node => {
+    // 搜索节点名称
+    if (node.name && node.name.toLowerCase().includes(searchLower)) {
+      return true;
+    }
+    // 搜索角色
+    if (node.role && node.role.toLowerCase().includes(searchLower)) {
+      return true;
+    }
+    // 搜索描述
+    if (node.description && node.description.toLowerCase().includes(searchLower)) {
+      return true;
+    }
+    // 搜索工作空间
+    if (node.workspace && node.workspace.toLowerCase().includes(searchLower)) {
+      return true;
+    }
+    return false;
+  });
+}
+
+/**
+ * 更新清除搜索按钮状态
+ */
+function updateClearSearchButton() {
+  if (searchInput && searchInput.value.trim() !== '') {
+    clearSearchBtn.classList.add('visible');
+  } else {
+    clearSearchBtn.classList.remove('visible');
+  }
+}
+
+/**
+ * 清除搜索
+ */
+function clearSearch() {
+  searchInput.value = '';
+  searchQuery = '';
+  renderNodes(currentNodes);
+  searchInput.focus();
+  showNotification('SEARCH CLEARED');
 }
 
 /**
@@ -362,6 +441,26 @@ function bindEvents() {
   
   // 主题切换按钮
   themeToggle.addEventListener('click', toggleTheme);
+  
+  // 搜索输入框
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      searchQuery = e.target.value;
+      renderNodes(currentNodes);
+    });
+    
+    // 支持 ESC 键清除搜索
+    searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        clearSearch();
+      }
+    });
+  }
+  
+  // 清除搜索按钮
+  if (clearSearchBtn) {
+    clearSearchBtn.addEventListener('click', clearSearch);
+  }
   
   // 页面可见性变化时暂停/恢复刷新
   document.addEventListener('visibilitychange', () => {
